@@ -13,7 +13,8 @@ pub mod memory;
 
 pub use error::{ErrorCategory, ErrorDetail, KernelError, KernelResult};
 pub use handle::{
-    ContextKey, Generation, Handle, HandleGuard, HandleKey, SlotIndex, TypedHandleRegistry,
+    ContextKey, Generation, Handle, HandleArenaSnapshot, HandleGuard, HandleKey,
+    HandleRetireReport, SlotIndex, TypedHandleRegistry,
 };
 pub use memory::{
     BorrowedCallBuffer, CallerOutputBuffer, NativeBufferTag, NativeOwnedBufferHandle,

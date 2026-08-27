@@ -131,6 +131,27 @@ impl<T> HandleArena<T> {
         Ok(value)
     }
 
+    /// Take live payloads so the caller can drop them outside the lock.
+    pub(crate) fn drain_occupied(&mut self) -> Vec<T> {
+        let mut drained = Vec::with_capacity(self.len() as usize);
+        for (index, slot) in self.slots.iter_mut().enumerate() {
+            let Some(value) = slot.value.take() else {
+                continue;
+            };
+            drained.push(value);
+            match slot.generation.raw().checked_add(1) {
+                Some(next) => {
+                    slot.generation = Generation::new(next);
+                    self.free.push(index as u32);
+                }
+                None => {
+                    self.retired += 1;
+                }
+            }
+        }
+        drained
+    }
+
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> u32 {
         (self.slots.len() - self.free.len() - self.retired as usize) as u32
@@ -138,6 +159,10 @@ impl<T> HandleArena<T> {
 
     pub fn capacity(&self) -> u32 {
         self.slots.len() as u32
+    }
+
+    pub(crate) fn retired_slots(&self) -> u32 {
+        self.retired
     }
 
     /// Test hook: set a free slot's generation without cycling insert/remove.

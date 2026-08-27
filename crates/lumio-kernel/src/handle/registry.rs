@@ -5,6 +5,19 @@ use std::sync::RwLock;
 use super::{ContextKey, Handle, HandleArena, HandleGuard};
 use crate::error::{ErrorCategory, ErrorDetail, KernelError};
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HandleRetireReport {
+    pub dropped: u32,
+    pub already_empty: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HandleArenaSnapshot {
+    pub live: u32,
+    pub capacity: u32,
+    pub retired_slots: u32,
+}
+
 pub struct TypedHandleRegistry<T> {
     arena: RwLock<HandleArena<T>>,
     context: ContextKey,
@@ -52,6 +65,33 @@ impl<T> TypedHandleRegistry<T> {
             .write()
             .expect("handle registry lock")
             .remove(Handle::from_key(key))
+    }
+
+    pub fn retire_all(&self) -> HandleRetireReport {
+        let (report, payloads) = {
+            let mut arena = self.arena.write().expect("handle registry lock");
+            let payloads = arena.drain_occupied();
+            let dropped = payloads.len() as u32;
+            let already_empty = arena.capacity().saturating_sub(dropped);
+            (
+                HandleRetireReport {
+                    dropped,
+                    already_empty,
+                },
+                payloads,
+            )
+        };
+        drop(payloads);
+        report
+    }
+
+    pub fn snapshot(&self) -> HandleArenaSnapshot {
+        let arena = self.arena.read().expect("handle registry lock");
+        HandleArenaSnapshot {
+            live: arena.len(),
+            capacity: arena.capacity(),
+            retired_slots: arena.retired_slots(),
+        }
     }
 
     pub fn context(&self) -> ContextKey {

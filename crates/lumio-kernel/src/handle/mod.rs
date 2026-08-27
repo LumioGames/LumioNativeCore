@@ -8,4 +8,4 @@ mod registry;
 pub use arena::HandleArena;
 pub use guard::HandleGuard;
 pub use key::{ContextKey, Generation, Handle, HandleKey, SlotIndex};
-pub use registry::TypedHandleRegistry;
+pub use registry::{HandleArenaSnapshot, HandleRetireReport, TypedHandleRegistry};

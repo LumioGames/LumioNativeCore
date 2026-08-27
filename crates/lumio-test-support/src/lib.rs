@@ -7,6 +7,8 @@
 
 mod clock;
 mod interleaving;
+mod leak;
 
 pub use clock::{FakeClock, FakeClockError};
 pub use interleaving::Interleaving;
+pub use leak::LeakSnapshot;

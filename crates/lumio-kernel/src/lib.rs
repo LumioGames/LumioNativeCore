@@ -6,5 +6,7 @@
 //! 契约见 `docs/specs/kernel-context-lifecycle.md` 与 `docs/specs/ffi-buffer-ownership.md`。
 
 pub mod error;
+pub mod handle;
 
 pub use error::{ErrorCategory, ErrorDetail, KernelError, KernelResult};
+pub use handle::{ContextKey, Generation, Handle, HandleKey, SlotIndex};

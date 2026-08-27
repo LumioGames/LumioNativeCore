@@ -52,7 +52,12 @@ fn allowed_deps() -> BTreeMap<&'static str, Vec<&'static str>> {
         ),
         (
             "lumio-test-support",
-            vec!["lumio-contract-types", "lumio-kernel", "lumio-job"],
+            vec![
+                "lumio-contract-types",
+                "lumio-kernel",
+                "lumio-job",
+                "lumio-platform",
+            ],
         ),
         ("xtask", vec![]),
     ])
@@ -405,7 +410,12 @@ mod tests {
             ),
             (
                 "lumio-test-support",
-                &["lumio-contract-types", "lumio-kernel", "lumio-job"],
+                &[
+                    "lumio-contract-types",
+                    "lumio-kernel",
+                    "lumio-job",
+                    "lumio-platform",
+                ],
             ),
             ("xtask", &[]),
         ]);

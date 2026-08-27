@@ -5,5 +5,8 @@
 
 #![forbid(unsafe_code)]
 
+mod clock;
 mod interleaving;
+
+pub use clock::{FakeClock, FakeClockError};
 pub use interleaving::Interleaving;

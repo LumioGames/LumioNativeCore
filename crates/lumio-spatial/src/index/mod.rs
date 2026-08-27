@@ -1,5 +1,9 @@
 //! Vendor-free spatial index backend seam. Adapters stay behind this trait.
 
+mod grid_reference;
+
+pub use grid_reference::GridReferenceIndex;
+
 use lumio_kernel::error::KernelResult;
 
 use crate::types::{Aabb3, SpatialObjectId};

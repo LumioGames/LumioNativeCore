@@ -7,6 +7,8 @@
 
 #![forbid(unsafe_code)]
 
+mod queue;
 mod record;
 
+pub use queue::RecordQueue;
 pub use record::{KernelRecordRef, OwnedKernelRecord};

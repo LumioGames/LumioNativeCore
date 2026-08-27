@@ -11,3 +11,6 @@ pub use boundary::ffi_boundary;
 
 mod validation;
 pub use validation::check_buffer_ptr_len;
+
+mod handles;
+pub use handles::decode_handle_for_context;

@@ -2,9 +2,10 @@
 
 > 提供有界 Worker、Typed Job、取消、超时和 Completion Batch 的 Native 调度原语。
 
-**优先级**：P0  
-**实施阶段**：Foundation  
-**架构基线**：`LGE-V1.0-2026-08-27`
+**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图）  
+**RepositoryDeliveryPhase**：Foundation  
+**ImplementationPriority**：I0  
+**架构基线**：`LGE-V1.1-2026-08-27`
 
 Job 结果由上层在规定 Barrier 消费；Native Worker 不回调托管 Hot Gameplay。
 
@@ -23,15 +24,15 @@ Job 结果由上层在规定 Barrier 消费；Native Worker 不回调托管 Hot 
 
 ## 输入、输出与所有权
 
-提交方明确转移 Job 输入批次的所有权，并通过不透明 Job Handle 查询结果。Completion Batch 在声明的消费边界前保持有效；取消或超时后不得自动写入已销毁的 World。队列满载应返回稳定错误和可观测的容量信息。
+提交方移交 `NativeOwnedBufferHandle`（或由 submit 复制借用字节）建立输入租约，并通过不透明 Job Handle 查询结果；租约持续到真实终态 reap，取消/超时不提前释放（ADR 0003）。Completion Batch 在声明的消费边界前保持有效；取消或超时后不得自动写入已销毁的 World。队列满载应返回稳定错误和可观测的容量信息。
 
 ## 依赖与约束
 
-依赖 `abi`、`handle`、`error` 和 `memory`。Job 不强制依赖具体 Kernel；调用方可在 `NativeJobBarrier` 或之后应用结果。线程亲和、重入性、最大并发和资源预算必须写进契约。
+依赖 `contract-types`、`handle`、`error`、`memory` 与私有单调时钟 port（跨 ABI 只收相对 duration，不拥有 Wall Clock/TickId）；Worker 集作为 ContextResource 注册进 `kernel-context`（ADR 0002）。Job 不强制依赖具体 Kernel；调用方可在 `NativeJobBarrier` 或之后应用结果。线程亲和、重入性、最大并发和资源预算必须写进契约。
 
 ## 线程、错误与观测
 
-Worker 只执行 Native 闭包或 Typed Kernel，不执行未知回调。状态转换必须可线性化；重复取消、超时后完成、结果丢失和 Worker 关闭都要可区分。队列指标、耗时和取消原因以批量 Diagnostic Event 输出。
+Worker 只执行 Rust 内部闭包或架构源注册的 Typed Kernel；公共 ABI 不接受调用方函数指针、managed delegate 或任何回调。状态转换在 Job 槽位上单点 CAS 线性化，状态集、竞态赢家表与超时观察语义见 [`job-state-machine.md`](../../docs/specs/job-state-machine.md)（ADR 0004）；重复取消、超时后完成、结果丢失和 Worker 关闭都要可区分。队列指标、耗时和取消原因以批量 Diagnostic Event 输出。
 
 ## 测试与性能
 
@@ -45,7 +46,9 @@ Worker 只执行 Native 闭包或 Typed Kernel，不执行未知回调。状态�
 
 ## 相关
 
+- [Job 状态机契约](../../docs/specs/job-state-machine.md)
 - [ABI 模块](../abi/README.md)
 - [Handle 模块](../handle/README.md)
 - [Memory 模块](../memory/README.md)
+- [kernel-context 模块](../kernel-context/README.md)
 - [根 README](../../README.md)

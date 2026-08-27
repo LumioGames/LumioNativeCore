@@ -1,0 +1,19 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/lumio-contract-types",
+    "crates/lumio-platform",
+    "crates/lumio-kernel",
+    "crates/lumio-job",
+    "crates/lumio-spatial",
+    "crates/lumio-codec",
+    "crates/lumio-diagnostics",
+    "crates/lumio-native-ffi",
+    "crates/lumio-test-support",
+    "xtask",
+]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+publish = false

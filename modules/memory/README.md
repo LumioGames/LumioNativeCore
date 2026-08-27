@@ -2,9 +2,10 @@
 
 > 管理调用方 Buffer、Allocator 边界、受限内存池和 Native 资源统计。
 
-**优先级**：P0  
-**实施阶段**：Foundation  
-**架构基线**：`LGE-V1.0-2026-08-27`
+**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图）  
+**RepositoryDeliveryPhase**：Foundation  
+**ImplementationPriority**：I0  
+**架构基线**：`LGE-V1.1-2026-08-27`
 
 内存所有权是 ABI 契约的一部分；本模块不保存托管对象，也不替上层拥有持久化数据。
 
@@ -23,11 +24,11 @@
 
 ## 输入、输出与所有权
 
-创建侧负责释放资源；借用 Buffer 只在声明的调用范围内有效。返回的地址、长度和对齐必须满足 ABI 约束，异步 Job 只能接收明确转移所有权的批次。释放操作重复调用必须返回可诊断结果，不得静默忽略错误。
+释放方按 allocator provenance 判定——谁分配谁释放，NativeCore 永不释放调用方内存，调用方只能经 release API 归还 Native 内存。借用 Buffer 只在声明的调用范围内有效；返回的地址、长度和对齐必须满足 ABI 约束。异步 Job 只能接收 `NativeOwnedBufferHandle`，借用字节须在 submit 时复制——Buffer 三分类与租约协议见 [`ffi-buffer-ownership.md`](../../docs/specs/ffi-buffer-ownership.md)（ADR 0003）。释放操作重复调用必须返回可诊断结果，不得静默忽略错误。
 
 ## 依赖与约束
 
-依赖 `abi` 的 Buffer/布局规则和 `error` 的容量失败类别。`job`、`spatial`、`codec` 可以消费本模块的分配能力；内存模块不依赖它们，避免资源层循环。
+依赖 `contract-types` 的 Buffer/布局规则和 `error` 的容量失败类别。`job`、`spatial`、`codec` 可以消费本模块的分配能力；内存模块不依赖它们，避免资源层循环。
 
 ## 线程、错误与观测
 
@@ -45,6 +46,7 @@
 
 ## 相关
 
+- [FFI Buffer 所有权契约](../../docs/specs/ffi-buffer-ownership.md)
 - [ABI 模块](../abi/README.md)
 - [错误模块](../error/README.md)
 - [Job 模块](../job/README.md)

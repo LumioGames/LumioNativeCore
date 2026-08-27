@@ -25,15 +25,31 @@ jobs:
           test -s LICENSE
           test -s .gitattributes
           grep -q '^\*\.md text eol=lf$' .gitattributes
-          test -s docs/architecture/LumioGameEngine_Architecture_v1.0.md
+          test -s docs/architecture/LumioGameEngine_Architecture_v1.1.md
           grep -q '^## 职责$' README.md
           grep -q '^## 明确不负责什么$' README.md
           grep -q '^## Source / Compile-Time Dependencies$' README.md
           grep -q '^## Headless Test Surface$' README.md
-          grep -q '^# LumioGameEngine V3 (v1.0)' docs/architecture/LumioGameEngine_Architecture_v1.0.md
-          grep -q 'LGE-V1.0-2026-08-27' README.md
-          grep -q 'LGE-V1.0-2026-08-27' docs/architecture/LumioGameEngine_Architecture_v1.0.md
+          grep -q '^# LumioGameEngine V3 (v1.1)' docs/architecture/LumioGameEngine_Architecture_v1.1.md
+          grep -q 'LGE-V1.1-2026-08-27' README.md
+          grep -q 'LGE-V1.1-2026-08-27' docs/architecture/LumioGameEngine_Architecture_v1.1.md
           grep -q '^## 子模块' README.md
           grep -q '^## 当前阶段与开发节奏$' README.md
           test -s docs/architecture/.baseline.sha256
           sha256sum -c docs/architecture/.baseline.sha256
+
+  native:
+    name: Native workspace checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Format, lint, build, test
+        run: |
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo build --workspace
+          cargo test --workspace
+      - name: Dependency DAG and symbol surface assertions
+        run: |
+          cargo xtask check-dep-dag
+          cargo xtask dump-symbols

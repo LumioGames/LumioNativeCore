@@ -2,15 +2,16 @@
 
 > 声明并校验平台、编译 Feature、Native 后端和资源能力，不表达业务模式。
 
-**优先级**：P0  
-**实施阶段**：Architecture Gate / Foundation  
-**架构基线**：`LGE-V1.0-2026-08-27`
+**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图）  
+**RepositoryDeliveryPhase**：Architecture Gate / Foundation  
+**ImplementationPriority**：I0  
+**架构基线**：`LGE-V1.1-2026-08-27`
 
 Capability 标识和兼容规则由 `LumioGameEngineArchitecture` 的 Baseline 定义；本文只说明本地读取和报告边界。
 
 ## 负责范围
 
-- 汇总平台、编译 Feature、可选后端和资源上限的能力声明。
+- 汇总能力声明并分三层表达：`StaticCapabilities`（平台/编译 Feature/后端，进程内不变）、`ConfiguredLimits`（配置的资源上限，Context 创建时固定）、`RuntimeStatus`（动态资源余量，只读查询、不缓存进快照）。
 - 提供请求能力与已提供能力之间的确定性匹配结果。
 - 把缺失能力、版本不匹配和资源预算不足转换为稳定错误。
 - 为 Loader、Host 和测试工具提供只读能力快照。
@@ -23,11 +24,11 @@ Capability 标识和兼容规则由 `LumioGameEngineArchitecture` 的 Baseline �
 
 ## 输入、输出与所有权
 
-能力快照由加载环境和构建产物生成，调用方以版本化只读结构读取。能力位集合不能由业务代码任意修改；动态资源变化必须通过新快照或明确的失效通知表达。快照不持有平台对象或托管引用。
+能力快照只含 `StaticCapabilities` 与 `ConfiguredLimits`，由加载环境和构建产物生成，调用方以版本化只读结构读取；`RuntimeStatus` 走独立查询接口，不进入快照与兼容匹配。能力位集合不能由业务代码任意修改。快照不持有平台对象或托管引用。
 
 ## 依赖与约束
 
-依赖 `abi` 的固定宽度集合和版本字段；能力位、名称和兼容关系来自架构源生成物。模块不得直接依赖网络、Voxel、Gameplay 或 Host 实现。
+依赖 `contract-types` 的固定宽度集合、版本字段与生成能力位常量；能力位、名称和兼容关系来自架构源生成物。模块不得直接依赖网络、Voxel、Gameplay 或 Host 实现。
 
 ## 线程、错误与观测
 

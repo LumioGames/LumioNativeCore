@@ -2,9 +2,10 @@
 
 > 提供带 `Index + Generation + Context` 校验的 Native 不透明 Handle 生命周期。
 
-**优先级**：P0  
-**实施阶段**：Foundation  
-**架构基线**：`LGE-V1.0-2026-08-27`
+**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图）  
+**RepositoryDeliveryPhase**：Foundation  
+**ImplementationPriority**：I0  
+**架构基线**：`LGE-V1.1-2026-08-27`
 
 Handle 只表示 NativeCore 内部资源，不表示 ECS Entity、NetEntity、World 或 Session 身份。
 
@@ -27,7 +28,7 @@ Handle 只表示 NativeCore 内部资源，不表示 ECS Entity、NetEntity、Wo
 
 ## 依赖与约束
 
-依赖 `abi` 的固定宽度表示和 `error` 的稳定失败类别；不得依赖 Voxel、Runtime、Server、Client 或 Game。Generation 溢出、索引回收和 Context 生成规则必须有明确的版本化测试约束。
+依赖 `contract-types` 的固定宽度表示和 `error` 的稳定失败类别；不得依赖 Voxel、Runtime、Server、Client 或 Game。Context 的创建、排空与关闭时序由 `kernel-context` 统一裁决（ADR 0002）；Generation 溢出槽位永久退休、ContextId 单调不复用，规则见 [`kernel-context-lifecycle.md`](../../docs/specs/kernel-context-lifecycle.md) §4，并有版本化测试约束。
 
 ## 线程、错误与观测
 
@@ -47,4 +48,5 @@ Handle 的不透明性和失效语义属于 ABI 契约；改变宽度、Context 
 
 - [ABI 模块](../abi/README.md)
 - [错误模块](../error/README.md)
+- [kernel-context 模块](../kernel-context/README.md)
 - [根 README](../../README.md)

@@ -2,9 +2,10 @@
 
 > 统一 NativeCore 的稳定错误类别、错误码承载和诊断载荷边界。
 
-**优先级**：P0  
-**实施阶段**：Architecture Gate / Foundation  
-**架构基线**：`LGE-V1.0-2026-08-27`
+**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图）  
+**RepositoryDeliveryPhase**：Architecture Gate / Foundation  
+**ImplementationPriority**：I0  
+**架构基线**：`LGE-V1.1-2026-08-27`
 
 具体 Error Code 和公共载荷 Schema 由 `LumioGameEngineArchitecture` 维护；本文不复制枚举或数值。
 
@@ -27,7 +28,7 @@
 
 ## 依赖与约束
 
-依赖 `abi` 的固定宽度结构和 Buffer 规则。Canonical Code、类别和字段含义只能从架构源生成物消费；模块实现不得自行添加同名码或改变既有码的含义。
+依赖 `contract-types` 的固定宽度结构、Buffer 规则与生成错误码常量——常量在叶子层承载，分类与转换的行为逻辑在本模块（ADR 0001）。Canonical Code、类别和字段含义只能从架构源生成物消费；模块实现不得自行添加同名码或改变既有码的含义。
 
 ## 线程、错误与观测
 

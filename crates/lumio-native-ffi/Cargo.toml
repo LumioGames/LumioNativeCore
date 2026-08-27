@@ -1,0 +1,22 @@
+[package]
+name = "lumio-native-ffi"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+lumio-contract-types = { path = "../lumio-contract-types" }
+lumio-kernel = { path = "../lumio-kernel" }
+lumio-job = { path = "../lumio-job" }
+lumio-spatial = { path = "../lumio-spatial" }
+lumio-platform = { path = "../lumio-platform" }
+lumio-codec = { path = "../lumio-codec", optional = true }
+lumio-diagnostics = { path = "../lumio-diagnostics", optional = true }
+
+[features]
+default = []
+experimental-codec = ["dep:lumio-codec"]
+experimental-diagnostics = ["dep:lumio-diagnostics"]

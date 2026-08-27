@@ -4,9 +4,9 @@
 
 ## 架构基线
 
-- Baseline：`LGE-V1.0-2026-08-27`
+- Baseline：`LGE-V1.1-2026-08-27`
 - 唯一架构源：`LumioGameEngineArchitecture`
-- 本地镜像：[`docs/architecture/LumioGameEngine_Architecture_v1.0.md`](docs/architecture/LumioGameEngine_Architecture_v1.0.md)
+- 本地镜像：[`docs/architecture/LumioGameEngine_Architecture_v1.1.md`](docs/architecture/LumioGameEngine_Architecture_v1.1.md)
 
 `LumioNativeCore` 位于依赖图最底层。它提供可被多个产品复用、与 Voxel/Gameplay/网络/Host 无关的 Rust Kernel 和稳定 C ABI 基础。它不是 VoxelWorld、ECS Runtime 或游戏内容运行时。
 
@@ -20,41 +20,44 @@
 - Native Handle 的 `Index + Generation` 生命周期、Context 校验和 Capability 状态。
 - 调用期 Buffer、空间索引、通用 Diff/压缩任务和诊断计数器。
 
-调用方创建并销毁 Handle/Buffer；进程、World、Session 和 Gameplay 生命周期由上层 Host 管理。NativeCore 不保存托管对象、业务实体、回调地址或跨调用的领域引用。
+所有权用三个术语区分：resource owner（跨调用资源唯一登记在所属 KernelContext）、handle holder（调用方持有 opaque handle 并发起释放）、allocator（内存释放方按分配来源判定，谁分配谁释放）。进程、World、Session 和 Gameplay 生命周期由上层 Host 管理。NativeCore 不保存托管对象、业务实体、回调地址或跨调用的领域引用。
 
 ## 子模块
 
-| 子模块 | 责任 | 优先级 | 实施阶段 | 文档 |
+| 子模块 | 责任 | 实施优先级 | 实施阶段 | 文档 |
 | --- | --- | --- | --- | --- |
-| `abi` | 固定宽度类型、结构版本、Buffer、Root API Table | P0 | Architecture Gate / Foundation | [`README`](modules/abi/README.md) |
-| `handle` | Index/Generation/Context Handle、重复释放和失效检查 | P0 | Foundation | [`README`](modules/handle/README.md) |
-| `error` | 稳定 Error Code、错误类别和诊断载荷 | P0 | Architecture Gate / Foundation | [`README`](modules/error/README.md) |
-| `capability` | 平台/编译 Feature/能力位声明 | P0 | Architecture Gate / Foundation | [`README`](modules/capability/README.md) |
-| `memory` | 调用方 Buffer、Allocator 边界、内存池和统计 | P0 | Foundation | [`README`](modules/memory/README.md) |
-| `job` | 有界 Worker、Typed Job、取消、超时和 Completion Batch | P0 | Foundation | [`README`](modules/job/README.md) |
-| `spatial` | Grid、Hash、BVH、邻域和批量距离 Kernel | P1 | NativeHeadless | [`README`](modules/spatial/README.md) |
-| `codec` | 领域无关的批量 Diff、压缩和 Canonical Buffer | P1 | NativeHeadless | [`README`](modules/codec/README.md) |
-| `diagnostics` | Native Metrics、Trace Event 和 Failure Bundle 片段 | P1 | NativeHeadless / Production Hardening | [`README`](modules/diagnostics/README.md) |
+| `abi`（contract-types + native-core-ffi） | 零依赖类型叶子与唯一导出门面、provider API Table | I0 | Architecture Gate / Foundation | [`README`](modules/abi/README.md) |
+| `handle` | Index/Generation/Context Handle、重复释放和失效检查 | I0 | Foundation | [`README`](modules/handle/README.md) |
+| `error` | 稳定 Error Code、错误类别和诊断载荷 | I0 | Architecture Gate / Foundation | [`README`](modules/error/README.md) |
+| `capability` | 平台/编译 Feature/能力位声明 | I0 | Architecture Gate / Foundation | [`README`](modules/capability/README.md) |
+| `memory` | 调用方 Buffer、Allocator 边界、内存池和统计 | I0 | Foundation | [`README`](modules/memory/README.md) |
+| `job` | 有界 Worker、Typed Job、取消、超时和 Completion Batch | I0 | Foundation | [`README`](modules/job/README.md) |
+| `kernel-context` | 生命周期根：Context 状态机、资源 registry、关闭时序 | I0 | Foundation | [`README`](modules/kernel-context/README.md) |
+| `spatial` | Grid、Hash、BVH、邻域、批量距离与碰撞基础计算 Kernel | I1 | NativeHeadless | [`README`](modules/spatial/README.md) |
+| `codec` | 纯字节压缩、校验和 Diff Kernel（pending） | I1 | NativeHeadless | [`README`](modules/codec/README.md) |
+| `diagnostics` | Native Metrics、Trace Event 和 FailureFragment（pending） | I1 | NativeHeadless / Production Hardening | [`README`](modules/diagnostics/README.md) |
 
-> 优先级和实施阶段是本仓的实现规划，不替代跨仓架构 Baseline。当前 Baseline 的 NativeCore 地图明确列出 `abi`、`handle`、`error`、`capability`、`memory`、`job`、`spatial`；`codec`、`diagnostics` 的公共契约接入须先在架构源完成确认。模块 README 只描述本地边界，不冻结新的公共 Schema。
+> 实施优先级（I0/I1/I2）和实施阶段是本仓的实现规划，不替代跨仓架构 Baseline（避免与缺陷级 P0/P1 撞名）。`LGE-V1.1` §16 的 NativeCore 首批地图为 `contract-types`、`error`、`capability`、`handle`、`memory`、`job`、`kernel-context`、`spatial`、`native-core-ffi`；`codec`、`diagnostics` 列为后续（待批准，BaselineStatus=pending，只做 feature-gated 私有原型）。模块 README 只描述本地边界，不冻结新的公共 Schema。
 
 ## 模块依赖方向
 
-实现依赖沿以下方向形成无环图；箭头表示编译期概念依赖，不表示运行时调用方向：
+实现依赖沿以下方向形成无环图；箭头表示编译期概念依赖，不表示运行时调用方向（完整口径见 [`native-core-module-map.md`](docs/specs/native-core-module-map.md)）：
 
 ```text
-abi
+contract-types（零依赖叶子）
 ├── error
 ├── capability
 ├── handle -> error
 ├── memory -> error
-├── job -> handle + error + memory
+├── job -> handle + error + memory（+ 私有 clock port）
+├── kernel-context -> capability + handle + memory（定义 ContextResource port）
 ├── spatial -> error + memory
-├── codec -> error + memory
-└── diagnostics -> error
+├── codec -> error + memory（pending）
+├── diagnostics -> error（pending，经 record port 接入）
+└── native-core-ffi -> 全部公开模块（唯一导出面）
 ```
 
-`spatial` 和 `codec` 可以由 `job` 调度，但不强制反向依赖 `job`。任何第三方类型都必须停留在 Adapter 内，不得进入稳定 ABI。
+`job`/`spatial`/`codec` 的跨调用资源实现 ContextResource port 并注册进 `kernel-context`（编译期方向指向 kernel-context，避免环）；`spatial` 和 `codec` 可由 `job` 调度，但不编译期依赖 `job`。禁止方向由 `cargo xtask check-dep-dag` 强制。任何第三方类型都必须停留在 Adapter 内，不得进入稳定 ABI。
 
 ## 模块 README 约定
 
@@ -80,10 +83,10 @@ abi
 
 ## Native/Managed ABI 契约
 
-公共入口采用单一 Root API Table（例如 `lumio_core_get_api_v1`）。每个导出结构包含 `abi_version`、`struct_size` 和 `capability_bits`；跨边界只传固定宽度 POD、版本化 Buffer 和不透明 Handle。
+跨仓 Root API 符号（例如 `lumio_core_get_api_v1`）由 CoreEngine `root-abi`/composition 唯一拥有并导出；NativeCore 只提供 provider API Table 源契约，自身发布产物不导出跨仓 Root 符号（Baseline v1.1 §8.1，ADR 0001）。导出结构以 `struct_size`（必要时加独立结构版本字段）保护尾部扩展；`capability_bits` 只出现在 Root API Table 与 Capability 快照。跨边界只传固定宽度 POD、版本化 Buffer 和不透明 Handle。
 
 - 不跨边界传 Rust/C# 容器、对象引用、异常或函数 Delegate。
-- 内存由创建侧释放，优先使用调用方提供的 Buffer，并返回所需长度。
+- 内存释放方按 allocator provenance 判定（谁分配谁释放，见 [`ffi-buffer-ownership.md`](docs/specs/ffi-buffer-ownership.md)）；优先使用调用方提供的 Buffer，并返回所需长度。
 - Rust 在 FFI 边界捕获 panic 并转为稳定错误；不让 panic 穿过 ABI。
 - Native Worker 不回调托管代码；异步结果在规定 Barrier 由上层消费。
 - 句柄必须校验 Generation、Context 和释放状态；重复释放返回稳定错误。
@@ -157,7 +160,7 @@ Manifest 至少记录 Commit、平台/架构、Compiler、Feature、ABI、Capabi
 ## 当前阶段与开发节奏
 
 1. **Architecture Gate**：冻结 ABI/Header、Error、Capability、Handle 和布局/故障 Fixture。
-2. **Foundation**：实现 `abi/handle/error/capability/memory/job` 最小闭环和 CI。
-3. **NativeHeadless**：加入 `spatial/codec/diagnostics` Kernel、跨平台 Benchmark 和 CoreEngine 包加载；其中 `codec`、`diagnostics` 仍须通过架构源契约接入确认。
+2. **Foundation**：实现 `contract-types/error/capability/handle/memory/job/kernel-context` 最小闭环、`native-core-ffi` 门面和 CI。
+3. **NativeHeadless**：加入 `spatial` Kernel、跨平台 Benchmark 和 CoreEngine 包加载；`codec`、`diagnostics` 维持 pending 私有原型，转正须架构源批准。
 4. **Production Hardening**：补齐 Sanitizer、可复现构建、符号/SBOM、性能曲线和崩溃证据。
-5. **P2**：更深 SIMD、更多空间算法和可选后端；不得改变已发布 ABI 主版本语义。
+5. **后置扩展（I2）**：更深 SIMD、更多空间算法和可选后端；不得改变已发布 ABI 主版本语义。

@@ -2,11 +2,12 @@
 
 > 提供领域无关的批量 Diff、压缩、Canonical Buffer 和校验热路径。
 
-**优先级**：P1  
-**实施阶段**：NativeHeadless  
-**架构基线**：`LGE-V1.0-2026-08-27`
+**BaselineStatus**：pending（`LGE-V1.1` §16 列为后续、待批准）  
+**RepositoryDeliveryPhase**：NativeHeadless  
+**ImplementationPriority**：I1  
+**架构基线**：`LGE-V1.1-2026-08-27`
 
-`codec` 是本仓规划模块；在架构源确认接入前，不承诺新的跨仓公共 Schema。
+`codec` 处于 pending（ADR 0005）：仓内只做 feature-gated 私有原型，不进公共 Header/export list；转 approved 只能由架构源批准驱动。职责缩窄为纯字节 Kernel（压缩/校验/diff），不承诺任何跨仓公共 Schema。
 
 ## 负责范围
 
@@ -27,15 +28,15 @@
 
 ## 依赖与约束
 
-依赖 `abi`、`error` 和 `memory`；可由 `job` 调度但不依赖其线程实现。压缩库、Hash 库和 Diff 实现通过 Adapter 隔离，供应商类型不能出现在 ABI。
+依赖 `contract-types`、`error` 和 `memory`；不编译期依赖 `job`——编码算子作为 operation 经 registry 运行时绑定，跨调用工作区作为 ContextResource 注册进 `kernel-context`（ADR 0002）。压缩库、Hash 库和 Diff 实现通过 Adapter 隔离，供应商类型不能出现在 ABI。
 
 ## 线程、错误与观测
 
-纯编码操作应可重入；共享字典、工作区和缓存的线程规则必须明确。截断、重复字段、未知必需字段、解压炸弹、校验失败和版本不兼容分别返回可诊断错误。记录输入/输出字节、压缩比、耗时和分配，不把内容明文写入诊断。
+纯编码操作应可重入；共享字典、工作区和缓存的线程规则必须明确。截断、解压炸弹、校验失败和版本不兼容分别返回可诊断错误；重复字段、未知必需字段等 schema 语义判定归上层生成 Serializer（ADR 0005），不在本模块。记录输入/输出字节、压缩比、耗时和分配，不把内容明文写入诊断。
 
 ## 测试与性能
 
-- Round-trip、空批次、重复字段、截断、损坏输入和未知可选字段。
+- Round-trip、空批次、截断和损坏输入。
 - 压缩比上限、最大消息/分配限制和 Hash/Checksum 失败。
 - 固定数据集测量吞吐、p95/p99、压缩比、分配和峰值内存，并与 Reference 实现差分。
 

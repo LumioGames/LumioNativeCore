@@ -11,12 +11,13 @@ metadata:
 ## 规范来源与优先级
 
 - Agent 的开发流程、测试政策和交付规则以 `.spec/` 为权威。
-- 模块边界以根 [`README.md`](../../../README.md) 为本仓入口；共享架构以 `LumioGameEngineArchitecture` 的 `LGE-V1.0-2026-08-27` 为唯一来源，本仓 [`架构镜像`](../../../docs/architecture/LumioGameEngine_Architecture_v1.0.md) 只读。
+- 模块边界以根 [`README.md`](../../../README.md) 为本仓入口；共享架构以 `LumioGameEngineArchitecture` 的 `LGE-V1.1-2026-08-27` 为唯一来源，本仓 [`架构镜像`](../../../docs/architecture/LumioGameEngine_Architecture_v1.1.md) 只读。
 - 冲突时不得在 Kernel 内自行改写公共 ABI/Capability；先在架构源完成 ADR、Schema、Fixture 和新 Baseline。
 
 ## 所有权边界
 
-- 本仓拥有通用 Handle/Buffer、Allocator、Job/Queue、空间/碰撞、Codec/Compression、时间与 Diagnostic Kernel。
+- 本仓拥有通用 Handle/Buffer、Allocator、Job/Queue、KernelContext 生命周期、空间/碰撞 Kernel，以及处于 pending 的 Codec/Diagnostics 原型（ADR 0005）。
+- 时间只保留私有可注入的 monotonic clock port（ADR 0004）：跨 ABI 只收相对 duration，不拥有 Wall Clock（归 Host）或 TickId（归 Runtime）；时钟读数只进诊断，不进权威 Hash。
 - 本仓不拥有 VoxelWorld/Chunk、ECS、Gameplay、Session、网络、Host 或产品语义；任何优化都必须保持领域无关。
 - 公共边界是批处理、版本化、可取消的 C ABI；托管调用只能消费生成 Binding，不得持有裸指针或内部 Rust 引用。
 - 第三方 crate 经 Adapter 隔离并锁定版本/Commit，不能把供应商类型写进稳定 ABI。

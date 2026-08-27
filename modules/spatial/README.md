@@ -1,17 +1,19 @@
 # spatial
 
-> 提供领域无关的 Grid、Hash、BVH、邻域查询和批量距离 Kernel。
+> 提供领域无关的 Grid、Hash、BVH、邻域查询、批量距离与碰撞基础计算 Kernel。
 
-**优先级**：P1  
-**实施阶段**：NativeHeadless  
-**架构基线**：`LGE-V1.0-2026-08-27`
+**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图首批）  
+**RepositoryDeliveryPhase**：NativeHeadless  
+**ImplementationPriority**：I1  
+**架构基线**：`LGE-V1.1-2026-08-27`
 
-当前阶段是本仓实现规划；架构镜像将 `spatial` 列入 NativeCore 首批模块，具体交付批次以架构源和本仓计划的同步结果为准。
+BaselineStatus 与交付批次相互独立：`spatial` 在基线首批地图内，本仓按 NativeHeadless 批次交付。
 
 ## 负责范围
 
 - 接收通用坐标、半径、索引键和批量数据，执行空间插入、删除、邻域和距离计算。
 - 提供 Grid、Hash、BVH 等可替换实现的统一 Kernel 边界。
+- 拥有仓库承诺的碰撞基础计算：宽相候选生成与批量相交/距离原语；碰撞响应、物理积分和 AOI 业务语义归上层。
 - 声明结果排序、重复输入、边界坐标和数值精度规则。
 - 输出可被上层 Voxel、Runtime 或 Gameplay Adapter 组合的纯计算结果。
 
@@ -27,7 +29,7 @@
 
 ## 依赖与约束
 
-依赖 `abi`、`error` 和 `memory`；可由 `job` 调度但不依赖 `job` 的具体实现。第三方空间库通过 Adapter 隔离。确定性输出必须使用显式排序规则，不把线程时序或地址纳入权威 Hash。
+依赖 `contract-types`、`error` 和 `memory`；不编译期依赖 `job`——空间算子作为 operation 经 registry 运行时绑定，跨调用索引作为 ContextResource 注册进 `kernel-context` 并随 Context 关闭失效（ADR 0002）。第三方空间库通过 Adapter 隔离。确定性输出必须使用显式排序规则，不把线程时序或地址纳入权威 Hash。
 
 ## 线程、错误与观测
 

@@ -2,4 +2,9 @@
 //!
 //! 状态机与竞态裁决见 `docs/specs/job-state-machine.md`（ADR 0004）；
 //! Worker 集作为 ContextResource 注册进 kernel-context。
-//! 当前为脚手架，公共 API 面为空。
+
+#![forbid(unsafe_code)]
+
+mod cancel;
+
+pub use cancel::{CancellationSource, CancellationView};

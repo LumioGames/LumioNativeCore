@@ -5,6 +5,7 @@
 //! 本 crate 不得依赖 lumio-job / lumio-diagnostics（xtask check-dep-dag 强制）。
 //! 契约见 `docs/specs/kernel-context-lifecycle.md` 与 `docs/specs/ffi-buffer-ownership.md`。
 
+pub mod capability;
 pub mod error;
 pub mod handle;
 

@@ -2,10 +2,10 @@
 
 > 统一 NativeCore 的稳定错误类别、错误码承载和诊断载荷边界。
 
-**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图）  
+**BaselineStatus**：approved（`LGE-V1.2` §16 模块地图）  
 **RepositoryDeliveryPhase**：Architecture Gate / Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.1-2026-08-27`
+**架构基线**：`LGE-V1.2-2026-08-27`
 
 具体 Error Code 和公共载荷 Schema 由 `LumioGameEngineArchitecture` 维护；本文不复制枚举或数值。
 

@@ -9,7 +9,7 @@
 
 `LumioNativeCore` 是跨项目复用的 Rust Native Kernel，拥有内存/Handle、Job、空间、碰撞、Codec 与领域无关高性能计算原语。
 
-- 当前架构基线是 `LGE-V1.1-2026-08-27`；公共架构与契约的唯一来源是 `LumioGameEngineArchitecture`，本仓只保存只读镜像。
+- 当前架构基线是 `LGE-V1.2-2026-08-27`；公共架构与契约的唯一来源是 `LumioGameEngineArchitecture`，本仓只保存只读镜像。
 - 本仓位于依赖图底层，不拥有 Voxel、Gameplay、Session、网络或 Host 语义，稳定边界是版本化 C ABI。
 - 开工前先读 [`repository-architecture.md`](knowledge/standards/repository-architecture.md)；详细模块边界见根 [`README.md`](../README.md)。
 

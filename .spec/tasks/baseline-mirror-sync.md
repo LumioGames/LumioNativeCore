@@ -1,14 +1,15 @@
 ---
-status: in_progress
+status: completed
 ---
 
 # 上游 V1.1 落地后同步本仓基线镜像与全部基线引用
 
-2026-08-27 进展：上游镜像同步会话已直接写入本仓（v1.1 镜像、v1.0/v0.3 降级指针、
-`.baseline.sha256`、根 README 基线行、workflow 断言），本仓验证内部一致（sha256 OK、
-workflow grep 全过）。**遗留**：镜像字节与上游已提交版 `1bde3cf` 不一致（同步自中间态工作区），
-且上游仍在继续修改 v1.1 正文——待上游静默并提交最终版后，重拷镜像、重算 hash、终验。
-模块 README 与 `.spec` 的基线引用已由 `modules-doc-fixes` 对齐 V1.1。
+2026-08-27 完结：上游随后直接发布 `LGE-V1.2-2026-08-27`（提交 `2d7980d`，Client/CoreEngine
+契约 + ADR-017~023；NativeCore 四处插入完整保留于 §8.1/§16，ADR-017 与本仓 spec 同向）。
+本仓镜像从上游**已提交对象**重拷：v1.2/v1.1/v1.0 三文件字节级一致（v0.3 上游不存在，本地删除），
+`.baseline.sha256` 覆盖 v1.2 正文；全部基线引用（根 README、workflow、.spec、九模块 README、
+kernel-context README、spec §4、contract-types 文档注释）升级到 V1.2。
+后续基线 bump 重复本卡程序即可（从上游已提交对象取字节，禁止取工作区中间态）。
 
 ## 涉及范围
 

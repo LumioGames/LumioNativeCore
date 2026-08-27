@@ -2,10 +2,10 @@
 
 > 提供带 `Index + Generation + Context` 校验的 Native 不透明 Handle 生命周期。
 
-**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图）  
+**BaselineStatus**：approved（`LGE-V1.2` §16 模块地图）  
 **RepositoryDeliveryPhase**：Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.1-2026-08-27`
+**架构基线**：`LGE-V1.2-2026-08-27`
 
 Handle 只表示 NativeCore 内部资源，不表示 ECS Entity、NetEntity、World 或 Session 身份。
 

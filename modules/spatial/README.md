@@ -2,10 +2,10 @@
 
 > 提供领域无关的 Grid、Hash、BVH、邻域查询、批量距离与碰撞基础计算 Kernel。
 
-**BaselineStatus**：approved（`LGE-V1.1` §16 模块地图首批）  
+**BaselineStatus**：approved（`LGE-V1.2` §16 模块地图首批）  
 **RepositoryDeliveryPhase**：NativeHeadless  
 **ImplementationPriority**：I1  
-**架构基线**：`LGE-V1.1-2026-08-27`
+**架构基线**：`LGE-V1.2-2026-08-27`
 
 BaselineStatus 与交付批次相互独立：`spatial` 在基线首批地图内，本仓按 NativeHeadless 批次交付。
 

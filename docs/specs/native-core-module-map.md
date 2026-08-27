@@ -79,5 +79,5 @@ native-core-ffi ──> kernel-context + 各公开模块（唯一导出面）
 ```
 
 当前判定：`contract-types/error/capability/handle/memory/job/kernel-context/native-core-ffi/spatial`
-= approved（随上游 V1.1 模块地图落地确认）；`codec`、`diagnostics` = **pending**——
+= approved（V1.1 起进入上游模块地图，随当前基线确认）；`codec`、`diagnostics` = **pending**——
 仓内允许 feature-gated 私有原型，**不进公共 Header/export list**，转 approved 只能由架构源批准驱动。

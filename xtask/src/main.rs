@@ -4,6 +4,9 @@
 //!   workspace crate 间的编译期依赖方向（normal 依赖，dev 依赖不计）。
 //! - `dump-symbols`：构建 `lumio-native-ffi` cdylib 并断言符号表不含跨仓 Root 符号
 //!   （ADR 0001：`lumio_core_get_api_v1` 归 CoreEngine root-abi）。
+//! - `check-baseline`：活动入口、模块 README、CI 与镜像 Hash 对齐 `LGE-V1.4-2026-08-27`。
+
+mod baseline;
 
 use std::collections::BTreeMap;
 use std::process::{Command, ExitCode};
@@ -243,13 +246,33 @@ fn cmd_dump_symbols() -> ExitCode {
     }
 }
 
+fn cmd_check_baseline() -> ExitCode {
+    match baseline::audit_v14_activity_refs(&baseline::workspace_root()) {
+        Ok(()) => {
+            println!(
+                "check-baseline OK：活动入口对齐 {}，镜像 {}",
+                baseline::BASELINE_ID,
+                baseline::MIRROR_REL
+            );
+            ExitCode::SUCCESS
+        }
+        Err(errors) => {
+            for e in errors {
+                eprintln!("FAIL {e}");
+            }
+            ExitCode::FAILURE
+        }
+    }
+}
+
 fn main() -> ExitCode {
     let arg = std::env::args().nth(1);
     match arg.as_deref() {
         Some("check-dep-dag") => cmd_check_dep_dag(),
         Some("dump-symbols") => cmd_dump_symbols(),
+        Some("check-baseline") => cmd_check_baseline(),
         _ => {
-            eprintln!("用法: cargo xtask <check-dep-dag|dump-symbols>");
+            eprintln!("用法: cargo xtask <check-dep-dag|dump-symbols|check-baseline>");
             ExitCode::from(2)
         }
     }
@@ -326,6 +349,32 @@ mod tests {
         let g = graph(&[("lumio-unknown", &[])]);
         let violations = check_graph(&g, &allowed_deps(), EXTERNAL_ALLOWLIST);
         assert!(!violations.is_empty());
+    }
+
+    #[test]
+    fn v14_activity_refs_match_live_execution_truth() {
+        let root = crate::baseline::workspace_root();
+        crate::baseline::audit_v14_activity_refs(&root).unwrap_or_else(|errors| {
+            panic!(
+                "R-00010 activity-entry audit failed:\n{}",
+                errors.join("\n")
+            );
+        });
+    }
+
+    #[test]
+    fn v14_mirror_digest_in_baseline_file_matches_hashed_bytes() {
+        let root = crate::baseline::workspace_root();
+        let sha_path = root.join(crate::baseline::BASELINE_SHA_REL);
+        let body = std::fs::read_to_string(&sha_path).expect("read .baseline.sha256");
+        let (expected, rel) =
+            crate::baseline::parse_baseline_sha_file(&body).expect("parse .baseline.sha256");
+        assert_eq!(rel, crate::baseline::MIRROR_REL);
+        let actual = crate::baseline::file_sha256_hex(
+            &root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR)),
+        )
+        .expect("hash v1.4 mirror");
+        assert_eq!(actual, expected);
     }
 
     #[test]

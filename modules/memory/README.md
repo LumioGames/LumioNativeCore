@@ -2,10 +2,10 @@
 
 > 管理调用方 Buffer、Allocator 边界、受限内存池和 Native 资源统计。
 
-**BaselineStatus**：approved（`LGE-V1.2` §16 模块地图）  
+**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.2-2026-08-27`
+**架构基线**：`LGE-V1.4-2026-08-27`
 
 内存所有权是 ABI 契约的一部分；本模块不保存托管对象，也不替上层拥有持久化数据。
 

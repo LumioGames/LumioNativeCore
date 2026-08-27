@@ -3,10 +3,10 @@
 > NativeCore 的生命周期根：一个 Context 代表一个资源域，统一拥有域内跨调用资源，
 > 唯一裁决关闭时序（ADR 0002，评审 ARCH-P0-002 的修复）。
 
-**BaselineStatus**：approved（`LGE-V1.2` §16 模块地图）  
+**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.2-2026-08-27`
+**架构基线**：`LGE-V1.4-2026-08-27`
 
 完整契约（状态机、资源拥有表、七步关闭顺序、竞态赢家表、Conformance Fixture）见
 [`kernel-context-lifecycle.md`](../../docs/specs/kernel-context-lifecycle.md)；本文只述边界。

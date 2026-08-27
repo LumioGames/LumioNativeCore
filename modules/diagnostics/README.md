@@ -2,10 +2,10 @@
 
 > 产生 Native Metrics、Trace Event 和 Failure Bundle 片段，供上层观测与故障重建使用。
 
-**BaselineStatus**：pending（`LGE-V1.2` §16 列为后续、待批准）  
+**BaselineStatus**：pending（`LGE-V1.4` §16 列为后续、待批准）  
 **RepositoryDeliveryPhase**：NativeHeadless / Production Hardening  
 **ImplementationPriority**：I1  
-**架构基线**：`LGE-V1.2-2026-08-27`
+**架构基线**：`LGE-V1.4-2026-08-27`
 
 `diagnostics` 处于 pending（ADR 0005）：仓内只做 feature-gated 私有原型，不进公共 Header/export list；转 approved 只能由架构源批准驱动。共享事件字段和 Failure Bundle Schema 以架构源发布物为准，本文不复制字段清单。
 

@@ -2,10 +2,10 @@
 
 > 提供有界 Worker、Typed Job、取消、超时和 Completion Batch 的 Native 调度原语。
 
-**BaselineStatus**：approved（`LGE-V1.2` §16 模块地图）  
+**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.2-2026-08-27`
+**架构基线**：`LGE-V1.4-2026-08-27`
 
 Job 结果由上层在规定 Barrier 消费；Native Worker 不回调托管 Hot Gameplay。
 

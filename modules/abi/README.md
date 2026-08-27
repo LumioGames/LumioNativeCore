@@ -3,10 +3,10 @@
 > 原单一 `abi` 模块按 ADR 0001 拆为两层：`contract-types` 零依赖类型叶子与
 > `native-core-ffi` 唯一导出门面。本文档同时描述两层的本地边界。
 
-**BaselineStatus**：approved（`LGE-V1.2` §16 模块地图）  
+**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Architecture Gate / Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.2-2026-08-27`
+**架构基线**：`LGE-V1.4-2026-08-27`
 
 公共 ABI Schema、结构字段和 Fixture 的规范来源是 `LumioGameEngineArchitecture`；本文只描述本地模块边界。分层与 crate 映射见 [`native-core-module-map.md`](../../docs/specs/native-core-module-map.md)。
 
@@ -62,4 +62,4 @@ Buffer 不足必须映射到 `error` 的稳定类别；panic 不得穿过导出�
 - [契约分层与符号面决策（ADR 0001）](../../.spec/decisions/0001-contract-layering-and-symbol-surface.md)
 - [仓库边界与架构契约](../../.spec/knowledge/standards/repository-architecture.md)
 - [根 README](../../README.md)
-- [架构镜像](../../docs/architecture/LumioGameEngine_Architecture_v1.2.md)
+- [架构镜像](../../docs/architecture/LumioGameEngine_Architecture_v1.4.md)

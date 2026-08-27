@@ -2,10 +2,10 @@
 
 > 声明并校验平台、编译 Feature、Native 后端和资源能力，不表达业务模式。
 
-**BaselineStatus**：approved（`LGE-V1.2` §16 模块地图）  
+**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Architecture Gate / Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.2-2026-08-27`
+**架构基线**：`LGE-V1.4-2026-08-27`
 
 Capability 标识和兼容规则由 `LumioGameEngineArchitecture` 的 Baseline 定义；本文只说明本地读取和报告边界。
 

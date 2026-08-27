@@ -6,7 +6,7 @@
 
 - Baseline：`LGE-V1.4-2026-08-27`
 - 唯一架构源：`LumioGameEngineArchitecture`
-- 本地镜像：[`docs/architecture/LumioGameEngine_Architecture_v1.2.md`](docs/architecture/LumioGameEngine_Architecture_v1.2.md)
+- 本地镜像：[`docs/architecture/LumioGameEngine_Architecture_v1.4.md`](docs/architecture/LumioGameEngine_Architecture_v1.4.md)
 
 `LumioNativeCore` 位于依赖图最底层。它提供可被多个产品复用、与 Voxel/Gameplay/网络/Host 无关的 Rust Kernel 和稳定 C ABI 基础。它不是 VoxelWorld、ECS Runtime 或游戏内容运行时。
 
@@ -37,7 +37,7 @@
 | `codec` | 纯字节压缩、校验和 Diff Kernel（pending） | I1 | NativeHeadless | [`README`](modules/codec/README.md) |
 | `diagnostics` | Native Metrics、Trace Event 和 FailureFragment（pending） | I1 | NativeHeadless / Production Hardening | [`README`](modules/diagnostics/README.md) |
 
-> 实施优先级（I0/I1/I2）和实施阶段是本仓的实现规划，不替代跨仓架构 Baseline（避免与缺陷级 P0/P1 撞名）。`LGE-V1.2` §16 的 NativeCore 首批地图为 `contract-types`、`error`、`capability`、`handle`、`memory`、`job`、`kernel-context`、`spatial`、`native-core-ffi`；`codec`、`diagnostics` 列为后续（待批准，BaselineStatus=pending，只做 feature-gated 私有原型）。模块 README 只描述本地边界，不冻结新的公共 Schema。
+> 实施优先级（I0/I1/I2）和实施阶段是本仓的实现规划，不替代跨仓架构 Baseline（避免与缺陷级 P0/P1 撞名）。`LGE-V1.4` §16 的 NativeCore 首批地图为 `contract-types`、`error`、`capability`、`handle`、`memory`、`job`、`kernel-context`、`spatial`、`native-core-ffi`；`codec`、`diagnostics` 列为后续（待批准，BaselineStatus=pending，只做 feature-gated 私有原型）。模块 README 只描述本地边界，不冻结新的公共 Schema。
 
 ## 模块依赖方向
 
@@ -83,7 +83,7 @@ contract-types（零依赖叶子）
 
 ## Native/Managed ABI 契约
 
-跨仓 Root API 符号（例如 `lumio_core_get_api_v1`）由 CoreEngine `root-abi`/composition 唯一拥有并导出；NativeCore 只提供 provider API Table 源契约，自身发布产物不导出跨仓 Root 符号（Baseline v1.2 §8.1，ADR 0001）。导出结构以 `struct_size`（必要时加独立结构版本字段）保护尾部扩展；`capability_bits` 只出现在 Root API Table 与 Capability 快照。跨边界只传固定宽度 POD、版本化 Buffer 和不透明 Handle。
+跨仓 Root API 符号（例如 `lumio_core_get_api_v1`）由 CoreEngine `root-abi`/composition 唯一拥有并导出；NativeCore 只提供 provider API Table 源契约，自身发布产物不导出跨仓 Root 符号（Baseline v1.4 §8.1，ADR 0001）。导出结构以 `struct_size`（必要时加独立结构版本字段）保护尾部扩展；`capability_bits` 只出现在 Root API Table 与 Capability 快照。跨边界只传固定宽度 POD、版本化 Buffer 和不透明 Handle。
 
 - 不跨边界传 Rust/C# 容器、对象引用、异常或函数 Delegate。
 - 内存释放方按 allocator provenance 判定（谁分配谁释放，见 [`ffi-buffer-ownership.md`](docs/specs/ffi-buffer-ownership.md)）；优先使用调用方提供的 Buffer，并返回所需长度。

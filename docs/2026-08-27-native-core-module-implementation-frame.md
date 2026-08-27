@@ -1,7 +1,7 @@
 # LumioNativeCore 模块实现框架设计
 
-> 仓库目标路径：`docs/specs/2026-08-27-native-core-module-implementation-frame.md`
-> 架构基线：`LGE-V1.2-2026-08-27`
+> 仓库目标路径：`docs/2026-08-27-native-core-module-implementation-frame.md`
+> 架构基线：`LGE-V1.4-2026-08-27`
 > 文档性质：实现级框架设计与可执行任务；不包含生产实现，不发布新公共 ABI。
 > 日期：2026-08-27
 

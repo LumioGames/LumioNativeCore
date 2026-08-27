@@ -24,23 +24,47 @@
 
 ## 子模块
 
-| 子模块 | 责任 | 首批状态 |
-| --- | --- | --- |
-| `abi` | 固定宽度类型、结构版本、Buffer、Root API Table | P0 |
-| `handle` | Index/Generation/Context Handle、重复释放和失效检查 | P0 |
-| `error` | 稳定 Error Code、错误类别和诊断载荷 | P0 |
-| `capability` | 平台/编译 Feature/能力位声明 | P0 |
-| `memory` | 调用方 Buffer、Allocator 边界、内存池和统计 | P0 |
-| `job` | 有界 Worker、Typed Job、取消、超时和 Completion Batch | P0 |
-| `spatial` | Grid、Hash、BVH、邻域和批量距离 Kernel | P1 |
-| `codec` | 领域无关的批量 Diff、压缩和序列化热路径 | P1 |
-| `diagnostics` | Native Metrics、Trace Event 和 Failure Bundle 片段 | P1 |
+| 子模块 | 责任 | 优先级 | 实施阶段 | 文档 |
+| --- | --- | --- | --- | --- |
+| `abi` | 固定宽度类型、结构版本、Buffer、Root API Table | P0 | Architecture Gate / Foundation | [`README`](modules/abi/README.md) |
+| `handle` | Index/Generation/Context Handle、重复释放和失效检查 | P0 | Foundation | [`README`](modules/handle/README.md) |
+| `error` | 稳定 Error Code、错误类别和诊断载荷 | P0 | Architecture Gate / Foundation | [`README`](modules/error/README.md) |
+| `capability` | 平台/编译 Feature/能力位声明 | P0 | Architecture Gate / Foundation | [`README`](modules/capability/README.md) |
+| `memory` | 调用方 Buffer、Allocator 边界、内存池和统计 | P0 | Foundation | [`README`](modules/memory/README.md) |
+| `job` | 有界 Worker、Typed Job、取消、超时和 Completion Batch | P0 | Foundation | [`README`](modules/job/README.md) |
+| `spatial` | Grid、Hash、BVH、邻域和批量距离 Kernel | P1 | NativeHeadless | [`README`](modules/spatial/README.md) |
+| `codec` | 领域无关的批量 Diff、压缩和 Canonical Buffer | P1 | NativeHeadless | [`README`](modules/codec/README.md) |
+| `diagnostics` | Native Metrics、Trace Event 和 Failure Bundle 片段 | P1 | NativeHeadless / Production Hardening | [`README`](modules/diagnostics/README.md) |
 
-`codec` 只提供机械编码能力，不定义 RPC、Gameplay Schema、Voxel Revision 或权限语义。
+> 优先级和实施阶段是本仓的实现规划，不替代跨仓架构 Baseline。当前 Baseline 的 NativeCore 地图明确列出 `abi`、`handle`、`error`、`capability`、`memory`、`job`、`spatial`；`codec`、`diagnostics` 的公共契约接入须先在架构源完成确认。模块 README 只描述本地边界，不冻结新的公共 Schema。
+
+## 模块依赖方向
+
+实现依赖沿以下方向形成无环图；箭头表示编译期概念依赖，不表示运行时调用方向：
+
+```text
+abi
+├── error
+├── capability
+├── handle -> error
+├── memory -> error
+├── job -> handle + error + memory
+├── spatial -> error + memory
+├── codec -> error + memory
+└── diagnostics -> error
+```
+
+`spatial` 和 `codec` 可以由 `job` 调度，但不强制反向依赖 `job`。任何第三方类型都必须停留在 Adapter 内，不得进入稳定 ABI。
+
+## 模块 README 约定
+
+每个模块目录下的 README 都必须说明：模块定位、负责与不负责的范围、输入输出和所有权、允许依赖、线程/资源/确定性约束、错误与观测、测试与性能、版本演进和相关文档。公共 ABI、Capability、Error Schema、ID Registry 和 Fixture 只引用 `LumioGameEngineArchitecture` 的已发布 Baseline，不在模块 README 中复制。
+
+`codec` 只提供机械编码能力，不定义 RPC、Gameplay Schema、Voxel Revision 或权限语义；`diagnostics` 只输出 Native 观测数据，不拥有外部 Sink、审计或事务日志。
 
 ## 职责
 
-- 冻结 `NativeManagedAbiV1` 所需的基础类型、结构长度、对齐、Error Code 和 Capability。
+- 消费架构源发布的 `NativeManagedAbiV1` 基础类型、结构长度、对齐、Error Code 和 Capability，并实现本地 ABI 适配。
 - 提供线程安全、可取消、有界的 Native Job 和批处理 API。
 - 提供可复用空间、碰撞基础计算、压缩和 Diff Kernel；领域策略由上层组合。
 - 输出平台静态/动态库、ABI Header、符号、SBOM 和 Benchmark 结果。
@@ -85,7 +109,7 @@ NativeCore 可以提供 Canonical Buffer、Diff、压缩和校验 Kernel，但�
 
 ## Generated Contract Dependencies
 
-本仓库维护 Native ABI 源 Schema、Header、Error/Capability 清单和布局测试输入。`LumioCoreEngine` 消费这些只读产物并生成统一 Root 包和托管绑定；本仓库不再独立生成第二套 C# 最终绑定。
+本仓库消费 `LumioGameEngineArchitecture` 发布的 Native ABI、Capability、Error Schema、Header、清单和布局测试输入；本仓库可以维护实现侧 Adapter 与本地一致性测试，但不维护第二套公共 Schema 或绑定生成器。`LumioCoreEngine` 消费这些只读产物并生成统一 Root 包和托管绑定。
 
 ## Runtime Loading Relationships
 
@@ -133,7 +157,7 @@ Manifest 至少记录 Commit、平台/架构、Compiler、Feature、ABI、Capabi
 ## 当前阶段与开发节奏
 
 1. **Architecture Gate**：冻结 ABI/Header、Error、Capability、Handle 和布局/故障 Fixture。
-2. **Foundation**：实现 `abi/handle/error/memory/job` 最小闭环和 CI。
-3. **NativeHeadless**：加入 spatial/codec Kernel、跨平台 Benchmark 和 CoreEngine 包加载。
+2. **Foundation**：实现 `abi/handle/error/capability/memory/job` 最小闭环和 CI。
+3. **NativeHeadless**：加入 `spatial/codec/diagnostics` Kernel、跨平台 Benchmark 和 CoreEngine 包加载；其中 `codec`、`diagnostics` 仍须通过架构源契约接入确认。
 4. **Production Hardening**：补齐 Sanitizer、可复现构建、符号/SBOM、性能曲线和崩溃证据。
 5. **P2**：更深 SIMD、更多空间算法和可选后端；不得改变已发布 ABI 主版本语义。

@@ -6,7 +6,9 @@
 #![forbid(unsafe_code)]
 
 mod index;
+mod query;
 mod types;
 
 pub use index::{GridReferenceIndex, RStarIndexAdapter, SpatialIndexBackend};
+pub use query::{AabbQuery, SpatialContext, SpatialHit};
 pub use types::{Aabb3, Point3, SpatialObjectId};

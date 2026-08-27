@@ -14,3 +14,6 @@ pub use validation::check_buffer_ptr_len;
 
 mod handles;
 pub use handles::decode_handle_for_context;
+
+mod exports;
+pub use exports::smoke_decode_handle;

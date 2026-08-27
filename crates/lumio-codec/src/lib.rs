@@ -9,7 +9,9 @@
 mod bounds;
 mod checksum;
 mod compression;
+mod resource;
 
 pub use bounds::CodecLimits;
 pub use checksum::checksum_bytes;
 pub use compression::{Lz4Adapter, ZstdAdapter};
+pub use resource::{CodecResource, CodecWorkspace};

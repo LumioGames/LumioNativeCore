@@ -4,4 +4,7 @@
 //! job/spatial/codec 实现该 port 并注册进 Context——编译期依赖方向是它们指向本 crate，
 //! 本 crate 不得依赖 lumio-job / lumio-diagnostics（xtask check-dep-dag 强制）。
 //! 契约见 `docs/specs/kernel-context-lifecycle.md` 与 `docs/specs/ffi-buffer-ownership.md`。
-//! 当前为脚手架，公共 API 面为空。
+
+pub mod error;
+
+pub use error::{ErrorCategory, ErrorDetail, KernelError, KernelResult};

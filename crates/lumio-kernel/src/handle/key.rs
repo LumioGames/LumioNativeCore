@@ -25,6 +25,10 @@ impl SlotIndex {
     pub const fn new(v: u32) -> Self {
         Self(v)
     }
+
+    pub const fn raw(self) -> u32 {
+        self.0
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -33,6 +37,10 @@ pub struct Generation(u32);
 impl Generation {
     pub const fn new(v: u32) -> Self {
         Self(v)
+    }
+
+    pub const fn raw(self) -> u32 {
+        self.0
     }
 }
 

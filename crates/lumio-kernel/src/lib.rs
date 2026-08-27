@@ -11,7 +11,9 @@ pub mod handle;
 pub mod memory;
 
 pub use error::{ErrorCategory, ErrorDetail, KernelError, KernelResult};
-pub use handle::{ContextKey, Generation, Handle, HandleKey, SlotIndex, TypedHandleRegistry};
+pub use handle::{
+    ContextKey, Generation, Handle, HandleGuard, HandleKey, SlotIndex, TypedHandleRegistry,
+};
 pub use memory::{
     BorrowedCallBuffer, CallerOutputBuffer, NativeBufferTag, NativeOwnedBufferHandle,
 };

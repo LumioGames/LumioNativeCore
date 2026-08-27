@@ -6,5 +6,7 @@
 #![forbid(unsafe_code)]
 
 mod cancel;
+mod id;
 
 pub use cancel::{CancellationSource, CancellationView};
+pub use id::{JobId, OperationId, operation_id_overlaps_generated};

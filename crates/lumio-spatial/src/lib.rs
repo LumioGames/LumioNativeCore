@@ -5,6 +5,8 @@
 
 #![forbid(unsafe_code)]
 
+mod index;
 mod types;
 
+pub use index::SpatialIndexBackend;
 pub use types::{Aabb3, Point3, SpatialObjectId};

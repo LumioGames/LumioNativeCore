@@ -8,3 +8,6 @@ publish.workspace = true
 lumio-contract-types = { path = "../lumio-contract-types" }
 lumio-kernel = { path = "../lumio-kernel" }
 lumio-platform = { path = "../lumio-platform" }
+
+[dev-dependencies]
+lumio-test-support = { path = "../lumio-test-support" }

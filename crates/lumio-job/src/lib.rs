@@ -7,6 +7,8 @@
 
 mod cancel;
 mod id;
+mod state;
 
 pub use cancel::{CancellationSource, CancellationView};
 pub use id::{JobId, OperationId, operation_id_overlaps_generated};
+pub use state::{JobState, JobStateCell, JobStateMachine};

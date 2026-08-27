@@ -29,6 +29,7 @@ dependencies = [
  "lumio-contract-types",
  "lumio-kernel",
  "lumio-platform",
+ "lumio-test-support",
 ]
 
 [[package]]

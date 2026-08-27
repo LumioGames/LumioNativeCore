@@ -10,9 +10,11 @@ mod id;
 mod operation;
 mod queue;
 mod state;
+mod worker;
 
 pub use cancel::{CancellationSource, CancellationView};
 pub use id::{JobId, OperationId, operation_id_overlaps_generated};
 pub use operation::{OperationRegistry, TypedKernel};
 pub use queue::BoundedJobQueue;
 pub use state::{JobState, JobStateCell, JobStateMachine};
+pub use worker::{CancelOutcome, JobHandle, JobRequest, JobSnapshot, JobSystem, JobSystemConfig};

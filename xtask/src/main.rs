@@ -35,7 +35,7 @@ fn allowed_deps() -> BTreeMap<&'static str, Vec<&'static str>> {
         ("lumio-codec", vec!["lumio-contract-types", "lumio-kernel"]),
         (
             "lumio-diagnostics",
-            vec!["lumio-contract-types", "lumio-kernel"],
+            vec!["lumio-contract-types", "lumio-kernel", "lumio-platform"],
         ),
         (
             "lumio-native-ffi",

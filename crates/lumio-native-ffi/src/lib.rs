@@ -8,3 +8,6 @@
 
 mod boundary;
 pub use boundary::ffi_boundary;
+
+mod validation;
+pub use validation::check_buffer_ptr_len;

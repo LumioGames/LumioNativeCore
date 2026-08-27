@@ -71,6 +71,14 @@ pub struct Handle<T> {
     _tag: PhantomData<fn() -> T>,
 }
 
+impl<T> Clone for Handle<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for Handle<T> {}
+
 impl<T> Handle<T> {
     pub const fn from_key(k: HandleKey) -> Self {
         Self {

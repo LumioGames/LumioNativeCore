@@ -16,7 +16,18 @@ pub struct CallerOutputBuffer<'a> {
 pub enum NativeBufferTag {}
 
 /// Native-owned buffer identity. Released only by the creating allocator.
-pub struct NativeOwnedBufferHandle(#[allow(dead_code)] Handle<NativeBufferTag>);
+#[derive(Clone, Copy)]
+pub struct NativeOwnedBufferHandle(Handle<NativeBufferTag>);
+
+impl NativeOwnedBufferHandle {
+    pub(crate) const fn wrap(handle: Handle<NativeBufferTag>) -> Self {
+        Self(handle)
+    }
+
+    pub(crate) const fn unwrap(self) -> Handle<NativeBufferTag> {
+        self.0
+    }
+}
 
 impl<'a> BorrowedCallBuffer<'a> {
     pub fn new(bytes: &'a [u8]) -> Self {

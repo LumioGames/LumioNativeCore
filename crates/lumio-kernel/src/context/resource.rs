@@ -1,6 +1,6 @@
 //! Object-safe port for resources owned by a KernelContext.
 
-use lumio_platform::Deadline;
+pub use lumio_platform::Deadline;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CancelReason {

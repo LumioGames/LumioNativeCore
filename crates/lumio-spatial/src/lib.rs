@@ -7,8 +7,10 @@
 
 mod index;
 mod query;
+mod resource;
 mod types;
 
 pub use index::{GridReferenceIndex, RStarIndexAdapter, SpatialIndexBackend};
 pub use query::{AabbQuery, SpatialContext, SpatialHit};
+pub use resource::SpatialResource;
 pub use types::{Aabb3, Point3, SpatialObjectId};

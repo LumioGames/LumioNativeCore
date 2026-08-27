@@ -11,5 +11,5 @@ pub use buffer::{
     BorrowedCallBuffer, CallerOutputBuffer, NativeBufferTag, NativeOwnedBufferHandle,
 };
 pub use call_scratch::CallScratch;
-pub use native_buffers::NativeBufferOwner;
+pub use native_buffers::{NativeBufferOwner, NativeBufferReleaseReport};
 pub use provenance::{AllocationClass, AllocationProvenance, AllocatorId};

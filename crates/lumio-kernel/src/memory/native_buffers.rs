@@ -7,6 +7,12 @@ use super::budget::MemoryBudget;
 use super::buffer::NativeOwnedBufferHandle;
 use super::provenance::AllocatorId;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NativeBufferReleaseReport {
+    pub released_buffers: u32,
+    pub released_bytes: u64,
+}
+
 pub struct NativeBufferOwner {
     registry: TypedHandleRegistry<Vec<u8>>,
     budget: MemoryBudget,
@@ -45,6 +51,17 @@ impl NativeBufferOwner {
         let payload = self.registry.remove(Handle::from_key(h.unwrap().key()))?;
         self.budget.release(payload.len() as u64);
         Ok(())
+    }
+
+    pub fn release_all(&mut self) -> NativeBufferReleaseReport {
+        let payloads = self.registry.take_all();
+        let released_buffers = payloads.len() as u32;
+        let released_bytes: u64 = payloads.iter().map(|p| p.len() as u64).sum();
+        self.budget.release(released_bytes);
+        NativeBufferReleaseReport {
+            released_buffers,
+            released_bytes,
+        }
     }
 
     pub fn charged(&self) -> u64 {

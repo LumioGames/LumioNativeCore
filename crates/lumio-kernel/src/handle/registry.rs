@@ -102,4 +102,8 @@ impl<T> TypedHandleRegistry<T> {
     pub fn len(&self) -> u32 {
         self.arena.read().expect("handle registry lock").len()
     }
+
+    pub(crate) fn take_all(&self) -> Vec<T> {
+        self.arena.write().expect("handle registry lock").take_all()
+    }
 }

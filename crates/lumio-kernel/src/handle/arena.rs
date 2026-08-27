@@ -152,6 +152,10 @@ impl<T> HandleArena<T> {
         drained
     }
 
+    pub(crate) fn take_all(&mut self) -> Vec<T> {
+        self.drain_occupied()
+    }
+
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> u32 {
         (self.slots.len() - self.free.len() - self.retired as usize) as u32

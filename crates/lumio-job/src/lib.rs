@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 mod cancel;
+mod completion;
 mod id;
 mod operation;
 mod queue;
@@ -13,6 +14,7 @@ mod state;
 mod worker;
 
 pub use cancel::{CancellationSource, CancellationView};
+pub use completion::{CompletionBatch, JobCompletion};
 pub use id::{JobId, OperationId, operation_id_overlaps_generated};
 pub use operation::{OperationRegistry, TypedKernel};
 pub use queue::BoundedJobQueue;

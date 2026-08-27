@@ -1,8 +1,10 @@
 //! Vendor-free spatial index backend seam. Adapters stay behind this trait.
 
 mod grid_reference;
+mod rstar_adapter;
 
 pub use grid_reference::GridReferenceIndex;
+pub use rstar_adapter::RStarIndexAdapter;
 
 use lumio_kernel::error::KernelResult;
 

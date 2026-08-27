@@ -8,5 +8,5 @@
 mod index;
 mod types;
 
-pub use index::{GridReferenceIndex, SpatialIndexBackend};
+pub use index::{GridReferenceIndex, RStarIndexAdapter, SpatialIndexBackend};
 pub use types::{Aabb3, Point3, SpatialObjectId};

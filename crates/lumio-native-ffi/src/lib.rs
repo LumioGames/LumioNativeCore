@@ -4,4 +4,7 @@
 //! （`lumio_core_get_api_v1`）归 CoreEngine root-abi 拥有，本 crate 永不导出——
 //! `cargo xtask dump-symbols` 强制断言。pending 模块（codec/diagnostics）
 //! 只能经 experimental feature 进入本地实验构建，默认发布面不含。
-//! 当前为脚手架，导出面为空。
+//! 当前为脚手架，C 导出面为空。
+
+mod boundary;
+pub use boundary::ffi_boundary;

@@ -71,6 +71,7 @@ dependencies = [
  "lumio-contract-types",
  "lumio-job",
  "lumio-kernel",
+ "lumio-platform",
 ]
 
 [[package]]

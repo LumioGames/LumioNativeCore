@@ -56,6 +56,38 @@ impl<T> HandleArena<T> {
         }))
     }
 
+    /// Resolve a live slot. Context is checked before bounds, occupancy, or generation.
+    pub(crate) fn get(&self, handle: Handle<T>) -> Result<&T, KernelError> {
+        let key = handle.key();
+        if key.context != self.context {
+            return Err(KernelError::new(
+                ErrorCategory::WrongContext,
+                ErrorDetail::None,
+            ));
+        }
+
+        let Some(slot) = self.slots.get(key.slot.raw() as usize) else {
+            return Err(KernelError::new(
+                ErrorCategory::InvalidHandle,
+                ErrorDetail::None,
+            ));
+        };
+
+        if slot.value.is_none() {
+            return Err(KernelError::new(
+                ErrorCategory::AlreadyReleased,
+                ErrorDetail::None,
+            ));
+        }
+        if slot.generation != key.generation {
+            return Err(KernelError::new(
+                ErrorCategory::InvalidHandle,
+                ErrorDetail::None,
+            ));
+        }
+        Ok(slot.value.as_ref().expect("occupied slot checked above"))
+    }
+
     pub fn remove(&mut self, handle: Handle<T>) -> Result<T, KernelError> {
         let key = handle.key();
         if key.context != self.context {

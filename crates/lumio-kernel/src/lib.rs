@@ -6,6 +6,7 @@
 //! 契约见 `docs/specs/kernel-context-lifecycle.md` 与 `docs/specs/ffi-buffer-ownership.md`。
 
 pub mod capability;
+pub mod context;
 pub mod error;
 pub mod handle;
 pub mod memory;

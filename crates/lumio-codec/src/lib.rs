@@ -8,6 +8,8 @@
 
 mod bounds;
 mod checksum;
+mod compression;
 
 pub use bounds::CodecLimits;
 pub use checksum::checksum_bytes;
+pub use compression::Lz4Adapter;

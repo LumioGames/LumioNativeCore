@@ -9,3 +9,7 @@
 mod clock;
 
 pub use clock::{Deadline, MonotonicClock, StdMonotonicClock, Ticks};
+
+#[cfg(test)]
+#[path = "../benches/clock.rs"]
+mod clock_benchmark;

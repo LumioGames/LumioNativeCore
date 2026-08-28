@@ -5,8 +5,10 @@
 //! `docs/specs/native-core-module-map.md`。
 //!
 //! Gate-0 只提供内部 seam 与负向 Gate。架构源已发布 baseline id
-//! `LGE-V1.4-2026-08-27`，但尚未发布 Rust/C package 或 C Header；不得手写公共
-//! ErrorCode / Capability / Operation 数值，也不得声称公共 ABI 已完成。
+//! `LGE-V1.4-2026-08-27`，并按 ADR-040 发布了 Root ABI bundle；本仓已登记为该
+//! bundle 的 consumer，直接绑定其 C Header，**不**消费 Rust/C# 生成包。绑定本身
+//! 尚未落地：ErrorCode / Capability / Operation 数值对本仓的需求仍未发布，
+//! 一律不得手写，也不得声称公共 ABI 已完成。
 
 #![forbid(unsafe_code)]
 

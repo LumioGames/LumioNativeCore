@@ -17,6 +17,12 @@ pub struct OperationRegistry {
     kernels: HashMap<OperationId, Arc<dyn TypedKernel>>,
 }
 
+impl Default for OperationRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OperationRegistry {
     pub fn new() -> Self {
         Self {

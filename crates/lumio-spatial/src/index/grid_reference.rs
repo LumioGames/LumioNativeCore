@@ -14,6 +14,12 @@ pub struct GridReferenceIndex {
     objects: BTreeMap<SpatialObjectId, Aabb3>,
 }
 
+impl Default for GridReferenceIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GridReferenceIndex {
     pub fn new() -> Self {
         Self {

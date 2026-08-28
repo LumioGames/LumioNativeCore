@@ -41,12 +41,12 @@ fn must_not_contain(errors: &mut Vec<String>, rel: &str, body: &str, needle: &st
 
 /// SHA-256 hex of `path` via `sha256sum` (CI) or `certutil` (Windows).
 pub fn file_sha256_hex(path: &Path) -> Result<String, String> {
-    if let Ok(out) = Command::new("sha256sum").arg(path).output() {
-        if out.status.success() {
-            let text = String::from_utf8_lossy(&out.stdout);
-            if let Some(hex) = text.split_whitespace().next() {
-                return Ok(hex.to_ascii_lowercase());
-            }
+    if let Ok(out) = Command::new("sha256sum").arg(path).output()
+        && out.status.success()
+    {
+        let text = String::from_utf8_lossy(&out.stdout);
+        if let Some(hex) = text.split_whitespace().next() {
+            return Ok(hex.to_ascii_lowercase());
         }
     }
     let out = Command::new("certutil")

@@ -65,6 +65,12 @@ pub struct StdMonotonicClock {
     epoch: Instant,
 }
 
+impl Default for StdMonotonicClock {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StdMonotonicClock {
     pub fn new() -> Self {
         Self {

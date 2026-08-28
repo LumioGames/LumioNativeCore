@@ -3,5 +3,10 @@ name = "lumio-platform"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+# `benches/clock.rs` is compiled as a `cfg(test)` module via `#[path]` from `lib.rs`
+# (criterion is not approved; EXTERNAL_ALLOWLIST is empty). Cargo's bench
+# auto-discovery would additionally register it as a bench target, where its
+# `use crate::{..}` does not resolve (E0432) and `--all-targets` fails.
+autobenches = false
 
 [dependencies]

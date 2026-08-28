@@ -1,7 +1,14 @@
 //! ABI layout assertions against the architecture Header / manifest.
 //!
-//! FOUNDATION-W1 has not published a C Header. This gate must not invent ABI
-//! sizes; an empty table is a match.
+//! The architecture source now publishes a C Header (ADR-040 Root ABI bundle,
+//! `origin/main:packages/abi/lumio_core.h`), but its bundle certifies exactly
+//! one `layoutProfileId` — `linux-x86_64-glibc`. Transcribing those sizes here
+//! unconditionally would assert layouts on darwin / windows that the
+//! architecture source has not certified, which is the same red line as
+//! inventing them. Binding therefore stays deferred until the bundle carries
+//! the remaining target profiles, or until this gate is target-gated.
+//!
+//! This gate must not invent ABI sizes; an empty table is a match.
 
 use crate::generated::StructSize;
 
@@ -13,7 +20,8 @@ pub struct LayoutMismatch {
     pub found: StructSize,
 }
 
-/// Generated Header layout rows. Empty while the Header is unpublished.
+/// Generated Header layout rows. Empty until binding is target-gated (see
+/// the module docs): the published bundle certifies `linux-x86_64-glibc` only.
 pub fn entries() -> &'static [(&'static str, StructSize)] {
     &[]
 }

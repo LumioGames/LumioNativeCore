@@ -1,6 +1,11 @@
 //! Blocked-header FFI smoke helper.
 //!
-//! Formal C Header and provider symbol list are unpublished (T-ffi-04).
+//! The architecture source publishes the Root ABI C Header (ADR-040), but the
+//! entry symbol it declares belongs to CoreEngine root-abi, not to this
+//! repository (ADR 0001; enforced by `cargo xtask dump-symbols` and by the
+//! source-text guard in this module's tests — do not spell that symbol here).
+//! The provider symbol list this crate would export is still unpublished
+//! (T-ffi-04).
 //! This module composes existing Rust seams; it is not a C ABI surface.
 //! Do not add `#[no_mangle]` or `extern "C"` names here.
 

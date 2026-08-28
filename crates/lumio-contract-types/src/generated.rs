@@ -1,9 +1,16 @@
 //! Architecture-source generated-contract adapter.
 //!
-//! The architecture source has published baseline id `LGE-V1.4-2026-08-27`, but
-//! FOUNDATION-W1 has not published a Rust/C package or C Header. This module is
-//! the internal seam only: opaque newtypes, no public numeric registries, and
-//! no copied schemas.
+//! The architecture source has published baseline id `LGE-V1.4-2026-08-27` and,
+//! under ADR-040, the Root ABI bundle at `origin/main:packages/abi/` — this
+//! repository is a registered consumer of that bundle (`rootAbi.consumers`) and
+//! binds its C Header directly. It is deliberately NOT a consumer of the Rust /
+//! C# generated packages.
+//!
+//! Binding is not done yet, so this module is still the internal seam only:
+//! opaque newtypes, no public numeric registries, no copied schemas. What the
+//! bundle publishes (handle / buffer / status layout, ABI version) is bindable;
+//! ErrorCode, Capability bits and Operation ids are still unpublished for this
+//! repository's needs. See `layout.rs` for the layout-profile caveat.
 
 /// Published architecture baseline this crate binds to.
 pub(crate) const ARCHITECTURE_BASELINE_ID: &str = "LGE-V1.4-2026-08-27";

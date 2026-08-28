@@ -18,6 +18,12 @@ pub struct RStarIndexAdapter {
     inner: GridReferenceIndex,
 }
 
+impl Default for RStarIndexAdapter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RStarIndexAdapter {
     pub fn new() -> Self {
         Self {

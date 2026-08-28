@@ -11,6 +11,12 @@ pub struct CodecWorkspace {
     scratch: Mutex<Vec<u8>>,
 }
 
+impl Default for CodecWorkspace {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CodecWorkspace {
     pub fn new() -> Self {
         Self {
@@ -39,6 +45,12 @@ impl CodecWorkspace {
 pub struct CodecResource {
     workspace: CodecWorkspace,
     destroyed: AtomicBool,
+}
+
+impl Default for CodecResource {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CodecResource {

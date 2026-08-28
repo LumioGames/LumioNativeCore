@@ -23,6 +23,12 @@ pub struct SpatialContext {
     index: GridReferenceIndex,
 }
 
+impl Default for SpatialContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SpatialContext {
     pub fn new() -> Self {
         Self {

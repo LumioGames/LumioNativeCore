@@ -15,6 +15,12 @@ pub struct ResourceRegistry {
     items: Mutex<Vec<Arc<dyn ContextResource>>>,
 }
 
+impl Default for ResourceRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ResourceRegistry {
     pub fn new() -> Self {
         Self {

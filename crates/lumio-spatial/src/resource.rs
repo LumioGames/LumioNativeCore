@@ -14,6 +14,12 @@ pub struct SpatialResource {
     destroyed: AtomicBool,
 }
 
+impl Default for SpatialResource {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SpatialResource {
     pub fn new() -> Self {
         Self {

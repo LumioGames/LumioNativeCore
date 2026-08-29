@@ -5,10 +5,13 @@ use lumio_kernel::capability::{
 };
 use lumio_kernel::error::ErrorCategory;
 
+fn key(id: &str) -> CapabilityKey {
+    CapabilityKey::from_registry_id(id).unwrap_or_else(|| panic!("registered capability {id}"))
+}
+
 #[test]
 fn require_missing_capability_fails() {
-    let static_caps =
-        StaticCapabilities::from_keys([CapabilityKey::from_local_index(1)]).expect("unique keys");
+    let static_caps = StaticCapabilities::from_keys([key("Native")]).expect("unique keys");
     let limits = ConfiguredLimits {
         max_handles: 1,
         max_native_bytes: 1,
@@ -18,10 +21,10 @@ fn require_missing_capability_fails() {
     };
     let source = CapabilitySource::new(static_caps, limits).expect("valid limits");
 
-    assert!(source.require(CapabilityKey::from_local_index(1)).is_ok());
+    assert!(source.require(key("Native")).is_ok());
 
     let err = source
-        .require(CapabilityKey::from_local_index(2))
+        .require(key("HybridCLR"))
         .expect_err("missing key must fail");
     assert_eq!(err.category(), ErrorCategory::CapabilityUnavailable);
 }

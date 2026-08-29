@@ -5,7 +5,7 @@
 ## 钉住的上游 revision（钉 revision，不钉分支名）
 
 - 上游仓库：`LumioGameEngineArchitecture`（`https://github.com/LumioGames/LumioGameEngineArchitecture.git`）
-- 镜像 revision：`origin/main` 提交 `1f2ead332b3dfc3042e1495bfbe6febb8699df7e`（含内容提交 `5c222c4`，2026-08-28）
+- 镜像 revision：`origin/main` 提交 `3287bba48fc49bf89782525ad55f45b0d77ae6f1`（含内容提交 `99f94fb`，ADR-048 generated surface，2026-08-29）
 - 架构基线：`LGE-V1.4-2026-08-27`
 
 ## 文件清单与上游路径
@@ -23,7 +23,8 @@
 
 - 数值权威只有 `ids/index.json`；生成包只发布 id 字符串，从生成包读 ordinal 等于读未发布之物。
 - V1 布局 Golden 只发布 `linux-x86_64-glibc` 一档，其余平台布局不得断言（D-016 待裁决）。
-- `capability_bits` 是掩码还是计数、以及任何 bit 位指派，V1 均未冻结；`Capability` 命名空间 numeric 是枚举序号，不是 bit 位（D-015 待裁决）。
+- Capability **键空间**已由 D-015 裁决（ADR-040 §7.1）：`ids/index.json` 的 `Capability` 命名空间是唯一权威，架构生成器是唯一发射方，Header 的 `LUMIO_CAPABILITY_<SCREAMING>` 是该权威的投影；下游消费生成物，仓内私有键值表即违规。
+- 仍未冻结：`capability_bits` 是掩码还是计数、以及任何 bit 位指派。`Capability` numeric 是枚举序号，**读键可以，推 bit 不行**。
 - 不存在 `OperationId` 命名空间；公共操作身份是 (`apiTable[].name`, `slots[].slotIndex`)。
 - 跨仓 Root 符号（`LUMIO_ENTRY_SYMBOL`）由 CoreEngine `root-abi`/`composition` 独占导出；本仓发布物不得导出。
 

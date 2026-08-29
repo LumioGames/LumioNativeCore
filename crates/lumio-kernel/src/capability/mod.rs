@@ -1,5 +1,8 @@
 //! Static capability set, configured resource limits, and runtime status.
-//! Public architecture bits remain blocked (B-ABI-002).
+//!
+//! Capability **keys** are projected from the generated architecture registry
+//! (D-015 / ADR-040 §7.1). Capability **bits** remain blocked (B-ABI-002):
+//! `capability_bits` mask-vs-count semantics and bit assignment are unfrozen.
 
 mod limits;
 mod runtime;

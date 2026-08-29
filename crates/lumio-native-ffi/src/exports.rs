@@ -17,8 +17,8 @@ use crate::handles::decode_handle_for_context;
 
 /// Decode `key` for `expected` inside the FFI panic/error boundary.
 ///
-/// Wrong-context handles return `ErrorCategory::WrongContext`. Mapping that
-/// category to a public architecture ErrorCode remains `MappingBlocked`.
+/// Wrong-context handles return `ErrorCategory::WrongContext`, which maps to
+/// the registered `WrongContext` ErrorCode (ADR-046).
 pub fn smoke_decode_handle(key: HandleKey, expected: ContextKey) -> Result<(), KernelError> {
     ffi_boundary(move || decode_handle_for_context(key, expected).map(|_| ()))
 }
@@ -28,7 +28,7 @@ mod tests {
     use super::smoke_decode_handle;
     use crate::boundary::ffi_boundary;
     use crate::handles::decode_handle_for_context;
-    use lumio_kernel::error::{ErrorCategory, MappingBlocked, to_architecture_error_code};
+    use lumio_kernel::error::{ErrorCategory, to_architecture_error_code};
     use lumio_kernel::handle::{ContextKey, Generation, HandleKey, SlotIndex};
 
     fn wrong_context_key() -> HandleKey {
@@ -51,7 +51,7 @@ mod tests {
         assert_eq!(err.category(), ErrorCategory::WrongContext);
         assert_ne!(err.category(), ErrorCategory::InvalidHandle);
         assert_ne!(err.category(), ErrorCategory::AlreadyReleased);
-        assert_eq!(to_architecture_error_code(&err), Err(MappingBlocked));
+        assert_eq!(to_architecture_error_code(&err).id(), "WrongContext");
 
         let via_boundary =
             match ffi_boundary(|| decode_handle_for_context(key, expected).map(|_| ())) {
@@ -62,7 +62,7 @@ mod tests {
         assert_eq!(via_boundary.category(), err.category());
         assert_eq!(
             to_architecture_error_code(&via_boundary),
-            Err(MappingBlocked)
+            to_architecture_error_code(&err)
         );
 
         assert!(smoke_decode_handle(key, ContextKey::new(1)).is_ok());

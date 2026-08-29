@@ -5,9 +5,7 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use lumio_kernel::error::{
-    ErrorCategory, ErrorDetail, KernelError, MappingBlocked, to_architecture_error_code,
-};
+use lumio_kernel::error::{ErrorCategory, ErrorDetail, KernelError, to_architecture_error_code};
 
 struct CountingAllocator;
 
@@ -79,6 +77,12 @@ fn error_hot_path_does_not_allocate() {
     let static_category = static_msg.category();
     let static_detail = static_msg.detail();
 
+    // 映射也在热路径上：一并纳入零分配窗口。
+    let none_code = to_architecture_error_code(&none);
+    let too_small_code = to_architecture_error_code(&too_small);
+    let limit_code = to_architecture_error_code(&limit);
+    let static_code = to_architecture_error_code(&static_msg);
+
     let allocs = ALLOC_COUNT.load(Ordering::SeqCst);
     assert_eq!(allocs, 0, "error hot path heap-allocated {allocs} time(s)");
 
@@ -115,8 +119,11 @@ fn error_hot_path_does_not_allocate() {
         other => panic!("unexpected detail: {other:?}"),
     }
 
-    assert_eq!(to_architecture_error_code(&none), Err(MappingBlocked));
-    assert_eq!(to_architecture_error_code(&too_small), Err(MappingBlocked));
-    assert_eq!(to_architecture_error_code(&limit), Err(MappingBlocked));
-    assert_eq!(to_architecture_error_code(&static_msg), Err(MappingBlocked));
+    assert_eq!(none_code.id(), "Cancelled");
+    assert_eq!(too_small_code.id(), "BufferTooSmall");
+    assert_eq!(limit_code.id(), "CapacityExceeded");
+    assert_eq!(static_code.id(), "InternalInvariant");
+    for code in [none_code, too_small_code, limit_code, static_code] {
+        assert!(code.numeric() > 0, "0 is reserved for success");
+    }
 }

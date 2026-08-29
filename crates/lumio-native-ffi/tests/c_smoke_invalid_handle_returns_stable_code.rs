@@ -17,7 +17,7 @@ mod handles;
 use boundary::ffi_boundary;
 use exports::smoke_decode_handle;
 use handles::decode_handle_for_context;
-use lumio_kernel::error::{ErrorCategory, MappingBlocked, to_architecture_error_code};
+use lumio_kernel::error::{ErrorCategory, to_architecture_error_code};
 use lumio_kernel::handle::{ContextKey, Generation, HandleKey, SlotIndex};
 
 fn wrong_context_key() -> HandleKey {
@@ -40,7 +40,7 @@ fn c_smoke_invalid_handle_returns_stable_code() {
     assert_eq!(err.category(), ErrorCategory::WrongContext);
     assert_ne!(err.category(), ErrorCategory::InvalidHandle);
     assert_ne!(err.category(), ErrorCategory::AlreadyReleased);
-    assert_eq!(to_architecture_error_code(&err), Err(MappingBlocked));
+    assert_eq!(to_architecture_error_code(&err).id(), "WrongContext");
 
     let via_boundary = match ffi_boundary(|| decode_handle_for_context(key, expected).map(|_| ())) {
         Err(e) => e,
@@ -50,7 +50,7 @@ fn c_smoke_invalid_handle_returns_stable_code() {
     assert_eq!(via_boundary.category(), err.category());
     assert_eq!(
         to_architecture_error_code(&via_boundary),
-        Err(MappingBlocked)
+        to_architecture_error_code(&err)
     );
 
     assert!(smoke_decode_handle(key, ContextKey::new(1)).is_ok());

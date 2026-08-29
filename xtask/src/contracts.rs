@@ -209,6 +209,9 @@ fn parse_num(b: &[u8], pos: &mut usize) -> Result<Json, String> {
 
 pub const GENERATED_DATA_REL: &str = "crates/lumio-contract-types/src/generated_data.rs";
 const BUNDLE_MIRROR_REL: &str = "docs/architecture/abi/root-abi-bundle.json";
+const IDS_MIRROR_REL: &str = "docs/architecture/abi/ids-index.json";
+/// ADR-046：`ErrorCode` numeric 必须放得进 `lumio_status_t`（int32）。
+const STATUS_NUMERIC_MAX: i64 = 2_147_483_647;
 
 fn read_mirror(root: &Path, rel: &str) -> Result<Json, String> {
     let path = root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
@@ -228,6 +231,7 @@ pub fn derive_generated_data(root: &Path) -> Result<String, String> {
          //! Source of truth: the byte-pinned mirrors under `docs/architecture/abi/`\n\
          //! (upstream revision in that directory's README). Regenerate with\n\
          //! `cargo xtask gen-contracts` after a mirror update; commit together.\n\n\
+         use crate::generated::ArchitectureErrorCode;\n\
          use crate::layout::{AbiStructGolden, AbiTypeGolden};\n\n",
     );
 
@@ -328,6 +332,41 @@ pub fn derive_generated_data(root: &Path) -> Result<String, String> {
             writeln!(out, "        (\"{member}\", {offset}),").unwrap();
         }
         out.push_str("    ] },\n");
+    }
+    out.push_str("];\n\n");
+
+    // ids/index.json 的 ErrorCode 命名空间（Architecture 所有；唯一 numeric 权威）。
+    let ids = read_mirror(root, IDS_MIRROR_REL)?;
+    let error_ns = ids
+        .get("namespaces")?
+        .as_arr()?
+        .iter()
+        .find(|ns| ns.get("namespace").and_then(Json::as_str).ok() == Some("ErrorCode"))
+        .ok_or("ids-index.json missing ErrorCode namespace")?;
+    if error_ns.get("owner")?.as_str()? != "Architecture" {
+        return Err("ErrorCode namespace owner is not Architecture".to_string());
+    }
+    let mut seen_ids: Vec<String> = Vec::new();
+    let mut seen_numerics: Vec<i64> = Vec::new();
+    out.push_str("#[rustfmt::skip]\npub(crate) const ERROR_CODES: &[ArchitectureErrorCode] = &[\n");
+    for value in error_ns.get("values")?.as_arr()? {
+        let id = value.get("id")?.as_str()?;
+        let numeric = value.get("numeric")?.as_i64()?;
+        let status = value.get("status")?.as_str()?;
+        if status != "Active" {
+            return Err(format!("ErrorCode {id} has unexpected status {status}"));
+        }
+        if !(1..=STATUS_NUMERIC_MAX).contains(&numeric) {
+            return Err(format!(
+                "ErrorCode {id} numeric {numeric} out of status range"
+            ));
+        }
+        if seen_ids.iter().any(|s| s == id) || seen_numerics.contains(&numeric) {
+            return Err(format!("ErrorCode duplicate id/numeric: {id}/{numeric}"));
+        }
+        seen_ids.push(id.to_string());
+        seen_numerics.push(numeric);
+        writeln!(out, "    ArchitectureErrorCode::new(\"{id}\", {numeric}),").unwrap();
     }
     out.push_str("];\n");
 

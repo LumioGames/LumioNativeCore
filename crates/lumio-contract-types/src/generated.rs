@@ -95,6 +95,11 @@ pub struct ArchitectureErrorCode {
 }
 
 impl ArchitectureErrorCode {
+    /// Only the generated registry tables construct instances.
+    pub(crate) const fn new(id: &'static str, numeric: i32) -> Self {
+        Self { id, numeric }
+    }
+
     /// Registered id string, e.g. `"InvalidHandle"`.
     pub const fn id(self) -> &'static str {
         self.id

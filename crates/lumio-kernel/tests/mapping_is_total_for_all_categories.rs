@@ -6,12 +6,6 @@ use lumio_kernel::error::{
 
 #[test]
 fn mapping_is_total_for_all_categories() {
-    assert!(
-        lumio_contract_types::registry::error_codes()
-            .next()
-            .is_none()
-    );
-
     let categories = [
         ErrorCategory::InvalidArgument,
         ErrorCategory::InvalidHandle,

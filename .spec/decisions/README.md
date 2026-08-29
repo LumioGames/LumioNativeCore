@@ -33,3 +33,4 @@
 | [0003](0003-ffi-buffer-classes-and-leases.md) | FFI Buffer 三分类 + 异步租约,按 provenance 定释放方 | 生效 |
 | [0004](0004-job-state-machine-and-clock-port.md) | Job 状态机 CAS 线性化 + 私有单调时钟 port | 生效 |
 | [0005](0005-codec-diagnostics-pending-and-dual-status.md) | codec/diagnostics 维持 pending,模块引入双状态标注 | 生效 |
+| [0006](0006-capability-keys-have-no-raw-constructor.md) | Capability key 只由生成注册表投影,不保留裸构造器 | 生效 |

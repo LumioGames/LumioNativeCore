@@ -4,7 +4,7 @@
 //! (upstream revision in that directory's README). Regenerate with
 //! `cargo xtask gen-contracts` after a mirror update; commit together.
 
-use crate::generated::ArchitectureErrorCode;
+use crate::generated::{ArchitectureCapabilityKey, ArchitectureErrorCode};
 use crate::layout::{AbiStructGolden, AbiTypeGolden};
 
 pub(crate) const ABI_POINTER_BYTES: u32 = 8;
@@ -104,4 +104,17 @@ pub(crate) const ERROR_CODES: &[ArchitectureErrorCode] = &[
     ArchitectureErrorCode::new("ContextDestroyed", 1051),
     ArchitectureErrorCode::new("PanicBoundary", 1052),
     ArchitectureErrorCode::new("InternalInvariant", 1053),
+];
+
+#[rustfmt::skip]
+pub(crate) const CAPABILITY_KEYS: &[ArchitectureCapabilityKey] = &[
+    ArchitectureCapabilityKey::new("Native", 1, "Active"),
+    ArchitectureCapabilityKey::new("HybridCLR", 2, "Reserved"),
+    ArchitectureCapabilityKey::new("ReferenceVoxel", 3, "Active"),
+    ArchitectureCapabilityKey::new("VoxelSnapshot", 4, "Active"),
+    ArchitectureCapabilityKey::new("VoxelStreaming", 5, "Active"),
+    ArchitectureCapabilityKey::new("VoxelSpatial", 6, "Active"),
+    ArchitectureCapabilityKey::new("VoxelMeshCollision", 7, "Active"),
+    ArchitectureCapabilityKey::new("VoxelAllResident", 8, "Active"),
+    ArchitectureCapabilityKey::new("VoxelVolatileChunks", 9, "Active"),
 ];

@@ -28,5 +28,5 @@ metadata:
 - 逐 Entity/逐 Voxel/逐包 FFI 必须先证明批处理不足；不得把跨边界调用开销扩散到上层。
 - 结果必须可诊断、可取消、可重复；不能以“调用方自行保证”替代契约，panic 必须在 ABI 边界转换为稳定错误。
 - ABI/Capability/Error Schema、ID 与 Fixture 只在架构源维护；本仓消费已发布 Baseline，不复制生成器或第二套 Schema。
-- Root ABI 消费机制（ADR-040 §7）：上游发布物字节级镜像在 [`docs/architecture/abi/`](../../../docs/architecture/abi/README.md)（钉 revision + `.baseline.sha256` 钉 Hash），Rust 侧数值经 `cargo xtask gen-contracts` 从镜像生成，测试与镜像互证；ErrorCode 数值权威只有 `ids/index.json`，Capability bit（D-015）与非 `linux-x86_64-glibc` 布局（D-016）保持不绑定。
+- Root ABI 消费机制（ADR-040 §7）：上游发布物字节级镜像在 [`docs/architecture/abi/`](../../../docs/architecture/abi/README.md)（钉 revision + `.baseline.sha256` 钉 Hash），Rust 侧数值经 `cargo xtask gen-contracts` 从镜像生成，测试与镜像互证；ErrorCode 与 Capability **键**的数值权威只有 `ids/index.json`（Capability 键空间由 D-015 裁决，ADR-040 §7.1，仓内私有键值表即违规），Capability **bit**（掩码/计数与 bit 位，D-015 未裁）与非 `linux-x86_64-glibc` 布局（D-016）保持不绑定。
 - 性能改动记录吞吐、p95/p99、分配、峰值内存、硬件/构建配置和结果确定性范围。

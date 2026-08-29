@@ -210,14 +210,77 @@ fn parse_num(b: &[u8], pos: &mut usize) -> Result<Json, String> {
 pub const GENERATED_DATA_REL: &str = "crates/lumio-contract-types/src/generated_data.rs";
 const BUNDLE_MIRROR_REL: &str = "docs/architecture/abi/root-abi-bundle.json";
 const IDS_MIRROR_REL: &str = "docs/architecture/abi/ids-index.json";
+const HEADER_MIRROR_REL: &str = "docs/architecture/abi/lumio_core.h";
 /// ADR-046：`ErrorCode` numeric 必须放得进 `lumio_status_t`（int32）。
 const STATUS_NUMERIC_MAX: i64 = 2_147_483_647;
+/// Header 里 capability 常量的前缀（ADR-040 §7.1 的键空间投影）。
+const CAPABILITY_DEFINE_PREFIX: &str = "#define LUMIO_CAPABILITY_";
 
 fn read_mirror(root: &Path, rel: &str) -> Result<Json, String> {
     let path = root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
     let text =
         std::fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
     parse(&text).map_err(|e| format!("{rel}: {e}"))
+}
+
+fn read_mirror_text(root: &Path, rel: &str) -> Result<String, String> {
+    let path = root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+    std::fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))
+}
+
+/// 注册 id 的 SCREAMING_SNAKE 投影，与发布 Header 的宏拼写一致
+/// （`HybridCLR` -> `HYBRID_CLR`）。
+pub fn screaming_snake(id: &str) -> String {
+    let chars: Vec<char> = id.chars().collect();
+    let mut out = String::new();
+    for (i, c) in chars.iter().enumerate() {
+        if i > 0
+            && c.is_ascii_uppercase()
+            && (!chars[i - 1].is_ascii_uppercase()
+                || chars.get(i + 1).is_some_and(char::is_ascii_lowercase))
+        {
+            out.push('_');
+        }
+        out.push(c.to_ascii_uppercase());
+    }
+    out
+}
+
+/// 镜像 Header 里的 capability 键投影。
+pub struct CapabilityDefines {
+    /// `(宏名去前缀, 数值)`，例如 `("VOXEL_SPATIAL", 6)`。
+    pub keys: Vec<(String, i64)>,
+    /// `LUMIO_CAPABILITY_COUNT`，缺失为 `None`。
+    pub count: Option<i64>,
+}
+
+/// 解析镜像 Header 的 capability 常量。
+///
+/// `LUMIO_CAPABILITY_BITS` 共用同一前缀但**不是键**——它是 `capability_bits`
+/// 标量，掩码还是计数、以及任何 bit 位指派 V1 均未冻结（D-015 只裁了键空间），
+/// 因此在这里被显式排除，不参与任何键推导。
+pub fn parse_capability_defines(header: &str) -> Result<CapabilityDefines, String> {
+    let mut keys = Vec::new();
+    let mut count = None;
+    for line in header.lines() {
+        let Some(rest) = line.strip_prefix(CAPABILITY_DEFINE_PREFIX) else {
+            continue;
+        };
+        let mut parts = rest.split_whitespace();
+        let (Some(name), Some(value)) = (parts.next(), parts.next()) else {
+            return Err(format!("malformed capability define `{line}`"));
+        };
+        let numeric: i64 = value
+            .trim_end_matches('u')
+            .parse()
+            .map_err(|e| format!("bad capability define `{line}`: {e}"))?;
+        match name {
+            "BITS" => {}
+            "COUNT" => count = Some(numeric),
+            _ => keys.push((name.to_string(), numeric)),
+        }
+    }
+    Ok(CapabilityDefines { keys, count })
 }
 
 /// 从镜像推导 `generated_data.rs` 的完整内容（确定性输出）。
@@ -231,7 +294,7 @@ pub fn derive_generated_data(root: &Path) -> Result<String, String> {
          //! Source of truth: the byte-pinned mirrors under `docs/architecture/abi/`\n\
          //! (upstream revision in that directory's README). Regenerate with\n\
          //! `cargo xtask gen-contracts` after a mirror update; commit together.\n\n\
-         use crate::generated::ArchitectureErrorCode;\n\
+         use crate::generated::{ArchitectureCapabilityKey, ArchitectureErrorCode};\n\
          use crate::layout::{AbiStructGolden, AbiTypeGolden};\n\n",
     );
 
@@ -381,7 +444,87 @@ pub fn derive_generated_data(root: &Path) -> Result<String, String> {
         seen_numerics.push(numeric);
         writeln!(out, "    ArchitectureErrorCode::new(\"{id}\", {numeric}),").unwrap();
     }
+    out.push_str("];\n\n");
+
+    // ids/index.json 的 Capability 命名空间（Architecture 所有）。D-015 裁决
+    // （ADR-040 §7.1）：注册表是键空间唯一权威，架构生成器是唯一发射方，下游
+    // 消费投影；仓内私有键值表即违规。numeric 是枚举序号，不是 bit 位。
+    let capability_ns = ids
+        .get("namespaces")?
+        .as_arr()?
+        .iter()
+        .find(|ns| ns.get("namespace").and_then(Json::as_str).ok() == Some("Capability"))
+        .ok_or("ids-index.json missing Capability namespace")?;
+    if capability_ns.get("owner")?.as_str()? != "Architecture" {
+        return Err("Capability namespace owner is not Architecture".to_string());
+    }
+
+    // Header 是同一权威的另一形态；两侧不一致说明镜像半新半旧，直接失败。
+    let header = read_mirror_text(root, HEADER_MIRROR_REL)?;
+    let header_defines = parse_capability_defines(&header)?;
+    let header_keys = &header_defines.keys;
+
+    let mut seen_ids: Vec<String> = Vec::new();
+    let mut seen_numerics: Vec<i64> = Vec::new();
+    out.push_str(
+        "#[rustfmt::skip]\npub(crate) const CAPABILITY_KEYS: &[ArchitectureCapabilityKey] = &[\n",
+    );
+    for value in capability_ns.get("values")?.as_arr()? {
+        let id = value.get("id")?.as_str()?;
+        let numeric = value.get("numeric")?.as_i64()?;
+        let status = value.get("status")?.as_str()?;
+        if status != "Active" && status != "Reserved" {
+            return Err(format!("Capability {id} has unexpected status {status}"));
+        }
+        if numeric <= 0 {
+            return Err(format!(
+                "Capability {id} numeric {numeric} is not a 1-based ordinal"
+            ));
+        }
+        if seen_ids.iter().any(|s| s == id) || seen_numerics.contains(&numeric) {
+            return Err(format!("Capability duplicate id/numeric: {id}/{numeric}"));
+        }
+        let macro_name = screaming_snake(id);
+        match header_keys.iter().find(|(name, _)| *name == macro_name) {
+            Some((_, header_numeric)) if *header_numeric == numeric => {}
+            Some((_, header_numeric)) => {
+                return Err(format!(
+                    "header LUMIO_CAPABILITY_{macro_name} = {header_numeric} disagrees with registry {id} = {numeric}"
+                ));
+            }
+            None => {
+                return Err(format!(
+                    "header is missing LUMIO_CAPABILITY_{macro_name} for registered Capability {id}"
+                ));
+            }
+        }
+        seen_ids.push(id.to_string());
+        seen_numerics.push(numeric);
+        writeln!(
+            out,
+            "    ArchitectureCapabilityKey::new(\"{id}\", {numeric}, \"{status}\"),"
+        )
+        .unwrap();
+    }
     out.push_str("];\n");
+
+    for (name, _) in header_keys {
+        if !seen_ids.iter().any(|id| screaming_snake(id) == *name) {
+            return Err(format!(
+                "header publishes LUMIO_CAPABILITY_{name} with no registered Capability value"
+            ));
+        }
+    }
+    match header_defines.count {
+        Some(count) if count == seen_ids.len() as i64 => {}
+        Some(count) => {
+            return Err(format!(
+                "header LUMIO_CAPABILITY_COUNT = {count} != {} registered Capability values",
+                seen_ids.len()
+            ));
+        }
+        None => return Err("header is missing LUMIO_CAPABILITY_COUNT".to_string()),
+    }
 
     Ok(out)
 }

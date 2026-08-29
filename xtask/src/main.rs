@@ -5,8 +5,11 @@
 //! - `dump-symbols`：构建 `lumio-native-ffi` cdylib 并断言符号表不含跨仓 Root 符号
 //!   （ADR 0001：`lumio_core_get_api_v1` 归 CoreEngine root-abi）。
 //! - `check-baseline`：活动入口、模块 README、CI 与镜像 Hash 对齐 `LGE-V1.4-2026-08-27`。
+//! - `gen-contracts`：从 `docs/architecture/abi/` 镜像重新生成
+//!   `crates/lumio-contract-types/src/generated_data.rs`（生成物不手改）。
 
 mod baseline;
+mod contracts;
 
 use std::collections::BTreeMap;
 use std::process::{Command, ExitCode};
@@ -270,14 +273,35 @@ fn cmd_check_baseline() -> ExitCode {
     }
 }
 
+fn cmd_gen_contracts() -> ExitCode {
+    let root = baseline::workspace_root();
+    match contracts::write_generated_data(&root) {
+        Ok(true) => {
+            println!("gen-contracts：已更新 {}", contracts::GENERATED_DATA_REL);
+            ExitCode::SUCCESS
+        }
+        Ok(false) => {
+            println!("gen-contracts：{} 已是最新", contracts::GENERATED_DATA_REL);
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("error: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
 fn main() -> ExitCode {
     let arg = std::env::args().nth(1);
     match arg.as_deref() {
         Some("check-dep-dag") => cmd_check_dep_dag(),
         Some("dump-symbols") => cmd_dump_symbols(),
         Some("check-baseline") => cmd_check_baseline(),
+        Some("gen-contracts") => cmd_gen_contracts(),
         _ => {
-            eprintln!("用法: cargo xtask <check-dep-dag|dump-symbols|check-baseline>");
+            eprintln!(
+                "用法: cargo xtask <check-dep-dag|dump-symbols|check-baseline|gen-contracts>"
+            );
             ExitCode::from(2)
         }
     }
@@ -365,6 +389,25 @@ mod tests {
                 errors.join("\n")
             );
         });
+    }
+
+    /// 生成物不得手改：从镜像重推导必须与已提交的 generated_data.rs 逐字节一致。
+    #[test]
+    fn generated_data_matches_mirror_derivation() {
+        let root = crate::baseline::workspace_root();
+        let derived = crate::contracts::derive_generated_data(&root)
+            .unwrap_or_else(|e| panic!("derive generated_data: {e}"));
+        let path = crate::contracts::generated_data_path(&root);
+        let committed = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+            panic!(
+                "read {}: {e}（先跑 cargo xtask gen-contracts）",
+                path.display()
+            )
+        });
+        assert_eq!(
+            committed, derived,
+            "generated_data.rs 与镜像推导不一致：重跑 `cargo xtask gen-contracts` 并与镜像一起提交"
+        );
     }
 
     #[test]

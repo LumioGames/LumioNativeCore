@@ -126,10 +126,19 @@ pub struct CapabilityBits {
     _private: (),
 }
 
-/// Generated struct size token used by the layout gate rows.
+/// Byte size of a generated type or struct, as published by the bundle
+/// Golden. Constructed only from generated data or measured Rust layouts.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct StructSize {
-    _private: (),
+pub struct StructSize(u32);
+
+impl StructSize {
+    pub(crate) const fn new(bytes: u32) -> Self {
+        Self(bytes)
+    }
+
+    pub const fn bytes(self) -> u32 {
+        self.0
+    }
 }
 
 /// `lumio_status_t`: `int32_t` carrying a registered `ErrorCode` numeric;

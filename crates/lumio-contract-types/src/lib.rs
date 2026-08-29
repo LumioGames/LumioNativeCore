@@ -14,6 +14,7 @@
 #![forbid(unsafe_code)]
 
 mod generated;
+mod generated_data;
 pub mod layout;
 pub mod registry;
 

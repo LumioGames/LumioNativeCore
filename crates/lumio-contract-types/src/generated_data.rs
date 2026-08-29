@@ -44,6 +44,12 @@ pub(crate) const ABI_STRUCT_GOLDEN: &[AbiStructGolden] = &[
 ];
 
 #[rustfmt::skip]
+pub(crate) const ABI_TABLE_VERSIONS: &[(&str, u32)] = &[
+    ("lumio_core_api", 1),
+    ("lumio_voxel_api", 1),
+];
+
+#[rustfmt::skip]
 pub(crate) const ERROR_CODES: &[ArchitectureErrorCode] = &[
     ArchitectureErrorCode::new("RevisionConflict", 1001),
     ArchitectureErrorCode::new("MaintenanceKick", 1002),

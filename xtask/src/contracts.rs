@@ -335,6 +335,19 @@ pub fn derive_generated_data(root: &Path) -> Result<String, String> {
     }
     out.push_str("];\n\n");
 
+    // 各 API table 的发布版本号（tables[].version）。
+    out.push_str("#[rustfmt::skip]\npub(crate) const ABI_TABLE_VERSIONS: &[(&str, u32)] = &[\n");
+    for table in bundle.get("tables")?.as_arr()? {
+        writeln!(
+            out,
+            "    (\"{}\", {}),",
+            table.get("name")?.as_str()?,
+            table.get("version")?.as_i64()?
+        )
+        .unwrap();
+    }
+    out.push_str("];\n\n");
+
     // ids/index.json 的 ErrorCode 命名空间（Architecture 所有；唯一 numeric 权威）。
     let ids = read_mirror(root, IDS_MIRROR_REL)?;
     let error_ns = ids

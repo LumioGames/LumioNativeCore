@@ -58,6 +58,14 @@ pub fn struct_entries() -> &'static [AbiStructGolden] {
     ABI_STRUCT_GOLDEN
 }
 
+/// Published version of one API table (`tables[].version`).
+pub fn table_version(table_name: &str) -> Option<u32> {
+    crate::generated_data::ABI_TABLE_VERSIONS
+        .iter()
+        .find(|(name, _)| *name == table_name)
+        .map(|(_, version)| *version)
+}
+
 /// Generated Header layout rows as (name, declared size) — POD types first,
 /// then structs, in published order.
 pub fn entries() -> Vec<(&'static str, StructSize)> {

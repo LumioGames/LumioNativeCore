@@ -10,7 +10,8 @@
 //! four indices, never the Rust/C# generated packages.
 //!
 //! Still deliberately unbound (treated as absent, not inferred):
-//! - `capability_bits` semantics and any bit position (D-015 pending);
+//! - `capability_bits` semantics and any bit position (D-015 adjudicated the
+//!   capability *key space* only, ADR-040 §7.1; mask-vs-count stays open);
 //! - any layout profile other than `linux-x86_64-glibc` (D-016 pending);
 //! - an `OperationId` namespace (does not exist; identity is the published
 //!   (`apiTable[].name`, `slots[].slotIndex`) pair).
@@ -26,13 +27,13 @@ pub(crate) const GENERATED_CONTRACT_REVISION: &str = ARCHITECTURE_BASELINE_ID;
 
 const ROOT_ABI_BUNDLE_ID: &str = "root-abi-v1";
 const ROOT_ABI_BUNDLE_DIGEST: &str =
-    "03ca75361fed3ca95f8efd55af2e311ea8300b2635b590ae6d46394d58bc6a39";
+    "02dce705a9a6fe7a437ed2e4137b03de7341ed614f30f10b614659c5226184a7";
 const ROOT_ABI_HEADER_DIGEST: &str =
-    "040451bbde5a4dec3726be5f5a7be4bb934c3f68a1ca87f9c55559cae738efc7";
+    "fa2aaca231b80ac5118dc13d3f4a4a50a1c16c844f09f8e2ac8d723af11c4352";
 const ROOT_ABI_COMPILER_NAME: &str = "lumio-abi-compiler";
 const ROOT_ABI_COMPILER_VERSION: &str = "1.0.0";
 const ROOT_ABI_COMPILER_DIGEST: &str =
-    "217437fd4755e1a339e2029838cc4a2d2fb305fa05520c8cfd10ea98cc2ff290";
+    "0aaf61d65153aadc4ddda1b36fa1b7bfb38373d52e8ba3299457cefe16864bff";
 const ROOT_ABI_INPUT_HASH: &str =
     "696a58d0525b897b549dd1e432166ae1020835902a5984221a8e60d5d8285bb3";
 const ROOT_ABI_LAYOUT_PROFILE_ID: &str = "linux-x86_64-glibc";
@@ -121,11 +122,53 @@ pub struct ArchitectureOperationId {
     _private: (),
 }
 
-/// Capability-bit newtype. Uninhabited until D-015 lands: V1 freezes neither
-/// mask-vs-count semantics nor any bit position, and the ID Registry
-/// `Capability` numerics are CoreEngine package-capability enumeration
-/// ordinals, not bit positions — deriving a key from either is forbidden
-/// (ADR-040 §7).
+/// One registered `Capability` value. D-015 (ADR-040 §7.1) adjudicated the
+/// key space: `ids/index.json` is the sole authority and the architecture
+/// generator its sole emitter, so instances exist only in the generated
+/// registry tables and no caller can mint an unregistered key.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct ArchitectureCapabilityKey {
+    id: &'static str,
+    numeric: u32,
+    status: &'static str,
+}
+
+impl ArchitectureCapabilityKey {
+    /// Only the generated registry tables construct instances.
+    pub(crate) const fn new(id: &'static str, numeric: u32, status: &'static str) -> Self {
+        Self {
+            id,
+            numeric,
+            status,
+        }
+    }
+
+    /// Registered id string, e.g. `"VoxelSpatial"`.
+    pub const fn id(self) -> &'static str {
+        self.id
+    }
+
+    /// Registered numeric: a 1-based enumeration ordinal, **not** a bit
+    /// position (D-015 froze the key space only).
+    pub const fn numeric(self) -> u32 {
+        self.numeric
+    }
+
+    /// Published lifecycle status, `"Active"` or `"Reserved"`.
+    pub const fn status(self) -> &'static str {
+        self.status
+    }
+
+    /// Whether the published status is `Active`.
+    pub fn is_active(self) -> bool {
+        self.status == "Active"
+    }
+}
+
+/// Capability-bit newtype. Uninhabited: D-015 adjudicated the key space only
+/// (see `ArchitectureCapabilityKey`). V1 still freezes neither mask-vs-count
+/// semantics for `capability_bits` nor any bit position, so reading a key is
+/// allowed and deriving a bit is not (ADR-040 §7 / §7.1).
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct CapabilityBits {
     _private: (),

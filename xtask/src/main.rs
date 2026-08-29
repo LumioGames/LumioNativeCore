@@ -372,14 +372,24 @@ mod tests {
         let root = crate::baseline::workspace_root();
         let sha_path = root.join(crate::baseline::BASELINE_SHA_REL);
         let body = std::fs::read_to_string(&sha_path).expect("read .baseline.sha256");
-        let (expected, rel) =
-            crate::baseline::parse_baseline_sha_file(&body).expect("parse .baseline.sha256");
-        assert_eq!(rel, crate::baseline::MIRROR_REL);
-        let actual = crate::baseline::file_sha256_hex(
-            &root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR)),
-        )
-        .expect("hash v1.4 mirror");
-        assert_eq!(actual, expected);
+        let rows = crate::baseline::parse_baseline_sha_file(&body).expect("parse .baseline.sha256");
+        assert!(
+            rows.iter()
+                .any(|(_, rel)| rel == crate::baseline::MIRROR_REL)
+        );
+        for required in crate::baseline::ABI_MIRROR_RELS {
+            assert!(
+                rows.iter().any(|(_, rel)| rel == required),
+                ".baseline.sha256 must pin {required}"
+            );
+        }
+        for (expected, rel) in &rows {
+            let actual = crate::baseline::file_sha256_hex(
+                &root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR)),
+            )
+            .unwrap_or_else(|e| panic!("hash {rel}: {e}"));
+            assert_eq!(&actual, expected, "pinned digest mismatch for {rel}");
+        }
     }
 
     #[test]

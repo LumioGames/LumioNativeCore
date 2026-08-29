@@ -4,11 +4,12 @@
 //! 错误码/能力位常量；不含任何行为逻辑。边界与依赖图见
 //! `docs/specs/native-core-module-map.md`。
 //!
-//! Gate-0 只提供内部 seam 与负向 Gate。架构源已发布 baseline id
-//! `LGE-V1.4-2026-08-27`，并按 ADR-040 发布了 Root ABI bundle；本仓已登记为该
-//! bundle 的 consumer，直接绑定其 C Header，**不**消费 Rust/C# 生成包。绑定本身
-//! 尚未落地：ErrorCode / Capability / Operation 数值对本仓的需求仍未发布，
-//! 一律不得手写，也不得声称公共 ABI 已完成。
+//! 架构源已发布 baseline id `LGE-V1.4-2026-08-27` 与 ADR-040 Root ABI bundle；
+//! 本仓登记为该 bundle 的 consumer，按 ADR-040 §7 直接绑定其 C Header 与四个
+//! 索引（字节级镜像见 `docs/architecture/abi/`），**不**消费 Rust/C# 生成包。
+//! ErrorCode 数值权威只有 `ids/index.json`（含 ADR-046 kernel band）；
+//! Capability bit 语义（D-015）、非 `linux-x86_64-glibc` 布局档（D-016）与
+//! OperationId（不存在，B-ABI-004 不适用）保持不绑定，一律不得手写。
 
 #![forbid(unsafe_code)]
 
@@ -18,6 +19,7 @@ pub mod registry;
 
 pub use generated::{
     AbiVersion, ArchitectureErrorCode, ArchitectureOperationId, CapabilityBits, ContractMismatch,
-    StructSize, architecture_baseline_id, verify_generated_contract_revision,
+    LumioBuffer, LumioCoreConfigV1, LumioHandle, LumioStatus, RootAbiBinding, StructSize,
+    abi_version, architecture_baseline_id, root_abi_binding, verify_generated_contract_revision,
     verify_generated_contract_revision_against,
 };

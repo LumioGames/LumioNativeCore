@@ -15,7 +15,12 @@ use std::collections::BTreeMap;
 use std::process::{Command, ExitCode};
 
 /// 跨仓 Root 符号：NativeCore 产物中出现即失败（ADR 0001）。
+/// `dump-symbols` 会与镜像 bundle 的 `entrySymbol` 交叉校验，防止硬编码漂移。
 const FORBIDDEN_ROOT_SYMBOL: &str = "lumio_core_get_api_v1";
+
+/// 已批准导出的 provider 符号。provider 组合契约未发布（T-ffi-04 blocked
+/// 半边），列表保持为空：任何 `symbolPrefix` 前缀导出都视为违规。
+const APPROVED_PROVIDER_EXPORTS: &[&str] = &[];
 
 /// crate -> 允许的 workspace 直接依赖（normal 图）。白名单以外的一切 workspace 边都算违规；
 /// 非 workspace 的外部依赖必须出现在 `EXTERNAL_ALLOWLIST`。
@@ -227,26 +232,45 @@ fn cmd_dump_symbols() -> ExitCode {
             exported.push(sym.trim_start_matches('_').to_string());
         }
     }
+
+    // 符号策略来自镜像 bundle；与硬编码交叉校验，防止两边各自漂移。
+    let (entry_symbol, symbol_prefix) =
+        match contracts::abi_symbol_policy(&baseline::workspace_root()) {
+            Ok(policy) => policy,
+            Err(err) => {
+                eprintln!("error: 读取镜像符号策略失败: {err}");
+                return ExitCode::from(2);
+            }
+        };
     let mut failed = false;
+    if entry_symbol != FORBIDDEN_ROOT_SYMBOL {
+        eprintln!(
+            "FAIL 镜像 entrySymbol `{entry_symbol}` 与硬编码 Root 符号 `{FORBIDDEN_ROOT_SYMBOL}` 不一致"
+        );
+        failed = true;
+    }
     if exported.iter().any(|s| s == FORBIDDEN_ROOT_SYMBOL) {
         eprintln!(
             "FAIL 产物导出了跨仓 Root 符号 {FORBIDDEN_ROOT_SYMBOL}（归 CoreEngine root-abi，ADR 0001）"
         );
         failed = true;
     }
-    let lumio_syms: Vec<&String> = exported
+    let unapproved: Vec<&String> = exported
         .iter()
-        .filter(|s| s.starts_with("lumio_"))
+        .filter(|s| s.starts_with(&symbol_prefix))
+        .filter(|s| !APPROVED_PROVIDER_EXPORTS.contains(&s.as_str()))
         .collect();
-    println!(
-        "dump-symbols：lumio_* 导出 {} 个{}",
-        lumio_syms.len(),
-        if lumio_syms.is_empty() {
-            "（脚手架阶段应为 0）".to_string()
-        } else {
-            format!("：{lumio_syms:?}")
-        }
-    );
+    if unapproved.is_empty() {
+        println!(
+            "dump-symbols：{symbol_prefix}* 导出 0 个未批准符号（批准列表 {} 项）",
+            APPROVED_PROVIDER_EXPORTS.len()
+        );
+    } else {
+        eprintln!(
+            "FAIL 未批准的 {symbol_prefix}* 导出：{unapproved:?}（provider 符号列表未发布，批准列表为空）"
+        );
+        failed = true;
+    }
     if failed {
         ExitCode::FAILURE
     } else {

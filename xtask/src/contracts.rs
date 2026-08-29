@@ -386,6 +386,16 @@ pub fn derive_generated_data(root: &Path) -> Result<String, String> {
     Ok(out)
 }
 
+/// 发布的符号面策略：`(entrySymbol, symbolPrefix)`，来自 bundle 镜像。
+pub fn abi_symbol_policy(root: &Path) -> Result<(String, String), String> {
+    let bundle = read_mirror(root, BUNDLE_MIRROR_REL)?;
+    let abi = bundle.get("abi")?;
+    Ok((
+        abi.get("entrySymbol")?.as_str()?.to_string(),
+        abi.get("symbolPrefix")?.as_str()?.to_string(),
+    ))
+}
+
 pub fn generated_data_path(root: &Path) -> std::path::PathBuf {
     root.join(GENERATED_DATA_REL.replace('/', std::path::MAIN_SEPARATOR_STR))
 }

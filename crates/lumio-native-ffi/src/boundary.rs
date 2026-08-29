@@ -1,10 +1,10 @@
 //! Unified FFI panic/error boundary.
 //!
-//! `to_architecture_error_code` currently returns `Err(MappingBlocked)` for
-//! every category, including `PanicBoundary` (T-error-03). Public numeric
-//! Panic ErrorCode is blocked, so this seam returns `KernelError` rather than
-//! `ArchitectureErrorCode`. After mapping is unblocked, FFI exports can call
-//! `to_architecture_error_code` at the C ABI.
+//! `to_architecture_error_code` is total since ADR-046 published the kernel
+//! status band (a caught panic maps to the registered `PanicBoundary` code).
+//! This seam still returns `KernelError` so internal callers keep the
+//! category and bounded detail; C exports convert to `LumioStatus` via the
+//! single mapping at the ABI edge.
 
 use lumio_kernel::error::{ErrorCategory, ErrorDetail, KernelError};
 

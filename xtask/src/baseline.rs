@@ -10,6 +10,13 @@ use std::process::Command;
 pub const BASELINE_ID: &str = "LGE-V1.4-2026-08-27";
 pub const MIRROR_REL: &str = "docs/architecture/LumioGameEngine_Architecture_v1.4.md";
 pub const BASELINE_SHA_REL: &str = "docs/architecture/.baseline.sha256";
+/// Root ABI 发布物镜像（ADR-040 §7 消费面；来源与 revision 见 docs/architecture/abi/README.md）。
+pub const ABI_MIRROR_RELS: [&str; 4] = [
+    "docs/architecture/abi/lumio_core.h",
+    "docs/architecture/abi/root-abi-bundle.json",
+    "docs/architecture/abi/ids-index.json",
+    "docs/architecture/abi/packages-index.json",
+];
 pub const FRAME_REL: &str = "docs/2026-08-27-native-core-module-implementation-frame.md";
 const STALE_MIRROR: &str = "LumioGameEngine_Architecture_v1.2.md";
 const STALE_BASELINE: &str = "LGE-V1.2-2026-08-27";
@@ -73,24 +80,28 @@ pub fn file_sha256_hex(path: &Path) -> Result<String, String> {
     ))
 }
 
-pub fn parse_baseline_sha_file(body: &str) -> Result<(String, String), String> {
-    let line = body
-        .lines()
-        .find(|l| !l.trim().is_empty())
-        .ok_or_else(|| ".baseline.sha256 is empty".to_string())?;
-    let mut parts = line.split_whitespace();
-    let hex = parts
-        .next()
-        .ok_or_else(|| ".baseline.sha256 missing digest".to_string())?
-        .to_ascii_lowercase();
-    let rel = parts
-        .next()
-        .ok_or_else(|| ".baseline.sha256 missing path".to_string())?
-        .replace('\\', "/");
-    if hex.len() != 64 {
-        return Err(format!(".baseline.sha256 digest length {}", hex.len()));
+/// Every `<hex>  <path>` row of `.baseline.sha256`, in file order.
+pub fn parse_baseline_sha_file(body: &str) -> Result<Vec<(String, String)>, String> {
+    let mut rows = Vec::new();
+    for line in body.lines().filter(|l| !l.trim().is_empty()) {
+        let mut parts = line.split_whitespace();
+        let hex = parts
+            .next()
+            .ok_or_else(|| ".baseline.sha256 missing digest".to_string())?
+            .to_ascii_lowercase();
+        let rel = parts
+            .next()
+            .ok_or_else(|| ".baseline.sha256 missing path".to_string())?
+            .replace('\\', "/");
+        if hex.len() != 64 {
+            return Err(format!(".baseline.sha256 digest length {}", hex.len()));
+        }
+        rows.push((hex, rel));
     }
-    Ok((hex, rel))
+    if rows.is_empty() {
+        return Err(".baseline.sha256 is empty".to_string());
+    }
+    Ok(rows)
 }
 
 fn audit_agents(root: &Path, errors: &mut Vec<String>) {
@@ -229,25 +240,34 @@ fn audit_mirror_hash(root: &Path, errors: &mut Vec<String>) {
             return;
         }
     };
-    let (expected, rel) = match parse_baseline_sha_file(&sha_body) {
+    let rows = match parse_baseline_sha_file(&sha_body) {
         Ok(v) => v,
         Err(e) => {
             errors.push(e);
             return;
         }
     };
-    if rel != MIRROR_REL {
+    if !rows.iter().any(|(_, rel)| rel == MIRROR_REL) {
         errors.push(format!(
-            ".baseline.sha256 path `{rel}` is not the v1.4 activity mirror"
+            ".baseline.sha256 does not pin the v1.4 activity mirror {MIRROR_REL}"
         ));
     }
-    let path = root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
-    match file_sha256_hex(&path) {
-        Ok(actual) if actual == expected => {}
-        Ok(actual) => errors.push(format!(
-            "v1.4 mirror SHA-256 {actual} != .baseline.sha256 {expected}"
-        )),
-        Err(e) => errors.push(e),
+    for required in ABI_MIRROR_RELS {
+        if !rows.iter().any(|(_, rel)| rel == required) {
+            errors.push(format!(
+                ".baseline.sha256 does not pin the Root ABI mirror file {required}"
+            ));
+        }
+    }
+    for (expected, rel) in &rows {
+        let path = root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+        match file_sha256_hex(&path) {
+            Ok(actual) if actual == *expected => {}
+            Ok(actual) => errors.push(format!(
+                "{rel} SHA-256 {actual} != .baseline.sha256 {expected}"
+            )),
+            Err(e) => errors.push(e),
+        }
     }
 }
 

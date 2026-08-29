@@ -1,21 +1,35 @@
 //! T-error-04 / R-00082: error hot path does not heap-allocate.
 //!
 //! `#[global_allocator]` is test-binary-only (this integration target).
+//! Counting is gated by a const-initialized thread-local window: a global
+//! count also sees libtest-harness allocations from other threads, which
+//! race into the window under machine load and made the test flaky. The
+//! const initializer keeps the TLS access allocation-free, so the gate
+//! itself cannot recurse into the hook.
 
 use std::alloc::{GlobalAlloc, Layout, System};
+use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use lumio_kernel::error::{
-    ErrorCategory, ErrorDetail, KernelError, MappingBlocked, to_architecture_error_code,
-};
+use lumio_kernel::error::{ErrorCategory, ErrorDetail, KernelError, to_architecture_error_code};
 
 struct CountingAllocator;
 
 static ALLOC_COUNT: AtomicUsize = AtomicUsize::new(0);
 
+thread_local! {
+    static COUNT_THIS_THREAD: Cell<bool> = const { Cell::new(false) };
+}
+
+fn counting_here() -> bool {
+    COUNT_THIS_THREAD.try_with(Cell::get).unwrap_or(false)
+}
+
 unsafe impl GlobalAlloc for CountingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        ALLOC_COUNT.fetch_add(1, Ordering::SeqCst);
+        if counting_here() {
+            ALLOC_COUNT.fetch_add(1, Ordering::SeqCst);
+        }
         unsafe { System.alloc(layout) }
     }
 
@@ -24,12 +38,16 @@ unsafe impl GlobalAlloc for CountingAllocator {
     }
 
     unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
-        ALLOC_COUNT.fetch_add(1, Ordering::SeqCst);
+        if counting_here() {
+            ALLOC_COUNT.fetch_add(1, Ordering::SeqCst);
+        }
         unsafe { System.alloc_zeroed(layout) }
     }
 
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        ALLOC_COUNT.fetch_add(1, Ordering::SeqCst);
+        if counting_here() {
+            ALLOC_COUNT.fetch_add(1, Ordering::SeqCst);
+        }
         unsafe { System.realloc(ptr, layout, new_size) }
     }
 }
@@ -55,6 +73,7 @@ fn assert_detail_has_no_string(detail: &ErrorDetail) {
 #[test]
 fn error_hot_path_does_not_allocate() {
     ALLOC_COUNT.store(0, Ordering::SeqCst);
+    COUNT_THIS_THREAD.with(|flag| flag.set(true));
 
     let none = KernelError::new(ErrorCategory::Cancelled, ErrorDetail::None);
     let too_small = KernelError::buffer_too_small(64, 8);
@@ -79,8 +98,25 @@ fn error_hot_path_does_not_allocate() {
     let static_category = static_msg.category();
     let static_detail = static_msg.detail();
 
+    // 映射也在热路径上：一并纳入零分配窗口。
+    let none_code = to_architecture_error_code(&none);
+    let too_small_code = to_architecture_error_code(&too_small);
+    let limit_code = to_architecture_error_code(&limit);
+    let static_code = to_architecture_error_code(&static_msg);
+
+    COUNT_THIS_THREAD.with(|flag| flag.set(false));
     let allocs = ALLOC_COUNT.load(Ordering::SeqCst);
     assert_eq!(allocs, 0, "error hot path heap-allocated {allocs} time(s)");
+
+    // 自证：门内的真实分配必须被计数，防止门控把测试弄成永真。
+    COUNT_THIS_THREAD.with(|flag| flag.set(true));
+    let boxed = Box::new(0u64);
+    COUNT_THIS_THREAD.with(|flag| flag.set(false));
+    assert!(
+        ALLOC_COUNT.load(Ordering::SeqCst) >= 1,
+        "counting hook must observe a real allocation on this thread"
+    );
+    drop(boxed);
 
     assert_eq!(none_category, ErrorCategory::Cancelled);
     assert_eq!(too_small_category, ErrorCategory::BufferTooSmall);
@@ -115,8 +151,11 @@ fn error_hot_path_does_not_allocate() {
         other => panic!("unexpected detail: {other:?}"),
     }
 
-    assert_eq!(to_architecture_error_code(&none), Err(MappingBlocked));
-    assert_eq!(to_architecture_error_code(&too_small), Err(MappingBlocked));
-    assert_eq!(to_architecture_error_code(&limit), Err(MappingBlocked));
-    assert_eq!(to_architecture_error_code(&static_msg), Err(MappingBlocked));
+    assert_eq!(none_code.id(), "Cancelled");
+    assert_eq!(too_small_code.id(), "BufferTooSmall");
+    assert_eq!(limit_code.id(), "CapacityExceeded");
+    assert_eq!(static_code.id(), "InternalInvariant");
+    for code in [none_code, too_small_code, limit_code, static_code] {
+        assert!(code.numeric() > 0, "0 is reserved for success");
+    }
 }

@@ -16,7 +16,9 @@ mod handles;
 pub use handles::decode_handle_for_context;
 
 mod exports;
-pub use exports::smoke_decode_handle;
+pub use exports::{LumioCoreApi, provider_core_api_table, smoke_decode_handle};
 
 mod symbol_guard;
-pub use symbol_guard::{crate_sources_contain_root_symbol, forbidden_root_symbol_name};
+pub use symbol_guard::{
+    crate_sources_contain_root_symbol, forbidden_root_symbol_name, mirror_entry_symbol,
+};

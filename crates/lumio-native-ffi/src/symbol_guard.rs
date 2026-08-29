@@ -9,8 +9,37 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Cross-crate Root symbol owned by CoreEngine `root-abi` (ADR 0001).
+///
+/// The published bundle's `entrySymbol` is the authority; the tests assert
+/// this hardcoded copy equals [`mirror_entry_symbol`] so neither can drift.
 pub fn forbidden_root_symbol_name() -> &'static str {
     "lumio_core_get_api_v1"
+}
+
+/// `abi.entrySymbol` extracted textually from the mirrored bundle
+/// (`docs/architecture/abi/root-abi-bundle.json`), keeping this guard free
+/// of crate dependencies.
+pub fn mirror_entry_symbol() -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../docs/architecture/abi/root-abi-bundle.json");
+    let text = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    // 镜像可能是 minified 或 pretty 格式：定位键名后跳过 `:` 与空白再取值。
+    let key = "\"entrySymbol\"";
+    let after_key = text
+        .find(key)
+        .unwrap_or_else(|| panic!("{} has no entrySymbol field", path.display()))
+        + key.len();
+    let rest = text[after_key..]
+        .trim_start()
+        .strip_prefix(':')
+        .map(str::trim_start);
+    let Some(value) = rest.and_then(|r| r.strip_prefix('"')) else {
+        panic!("{} entrySymbol is not a string", path.display());
+    };
+    let end = value
+        .find('"')
+        .unwrap_or_else(|| panic!("{} entrySymbol unterminated", path.display()));
+    value[..end].to_string()
 }
 
 /// True when any `src/**/*.rs` file uses the Root symbol as a Rust identifier.
@@ -165,6 +194,13 @@ fn strip_comments_and_strings(src: &str) -> String {
             out.push(' ');
             continue;
         }
+        // 字符/字节字面量（含引号内容如 `'"'` / `b'\''`）会让字符串识别失步，
+        // 必须整体跳过；`'ident`（无闭合引号）是生命周期，原样保留。
+        if let Some(end) = char_literal_end(b, i) {
+            i = end;
+            out.push(' ');
+            continue;
+        }
         let ch = src[i..].chars().next().expect("utf-8");
         out.push(ch);
         i += ch.len_utf8();
@@ -172,11 +208,110 @@ fn strip_comments_and_strings(src: &str) -> String {
     out
 }
 
+/// `Some(end)` when `b[i..]` starts a char/byte-char literal (optionally
+/// `b`-prefixed); `None` for lifetimes and everything else.
+fn char_literal_end(b: &[u8], i: usize) -> Option<usize> {
+    let mut j = i;
+    if b[j] == b'b' && j + 1 < b.len() && b[j + 1] == b'\'' {
+        j += 1;
+    }
+    if b[j] != b'\'' {
+        return None;
+    }
+    let content = j + 1;
+    if content >= b.len() {
+        return None;
+    }
+    if b[content] == b'\\' {
+        // 转义字面量：从转义序列后找最近的闭合引号。
+        let mut k = content + 2;
+        while k < b.len() && b[k] != b'\'' {
+            k += 1;
+        }
+        return (k < b.len()).then_some(k + 1);
+    }
+    // 单字符字面量 `'x'`；`'a`（无闭合）是生命周期。
+    let ch_len = core::str::from_utf8(&b[content..])
+        .ok()?
+        .chars()
+        .next()?
+        .len_utf8();
+    let close = content + ch_len;
+    (close < b.len() && b[close] == b'\'').then_some(close + 1)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{crate_sources_contain_root_symbol, forbidden_root_symbol_name, rust_sources};
+    use super::{
+        contains_ident, crate_sources_contain_root_symbol, forbidden_root_symbol_name,
+        mirror_entry_symbol, rust_sources, strip_comments_and_strings,
+    };
     use std::fs;
     use std::path::Path;
+
+    /// Regression: a quote inside a char/byte-char literal (`'"'`, `b'"'`)
+    /// must not desync the string stripper — a desynced scanner can both
+    /// miss real identifiers and report string contents as code.
+    #[test]
+    fn scanner_survives_quote_char_literals() {
+        let ident = forbidden_root_symbol_name();
+        let in_string_only = format!("let q = b'\"'; let s = \"{ident}\"; let c = '\"';");
+        assert!(
+            !contains_ident(&strip_comments_and_strings(&in_string_only), ident),
+            "string contents after a quote char literal must stay stripped"
+        );
+        let in_code = format!("let q = '\"'; let bad = {ident};");
+        assert!(
+            contains_ident(&strip_comments_and_strings(&in_code), ident),
+            "identifiers after a quote char literal must stay visible"
+        );
+        let lifetime = "fn f<'a>(x: &'a str) -> &'a str { x }";
+        assert!(!contains_ident(
+            &strip_comments_and_strings(lifetime),
+            ident
+        ));
+    }
+
+    /// The hardcoded Root symbol must equal the published `entrySymbol`, and
+    /// it must sit under the published `symbolPrefix` — the gate binds the
+    /// mirror, it does not merely repeat a string.
+    #[test]
+    fn forbidden_symbol_matches_published_entry_symbol() {
+        let published = mirror_entry_symbol();
+        assert_eq!(published, forbidden_root_symbol_name());
+        assert!(
+            published.starts_with("lumio_"),
+            "published entry symbol must carry the published symbolPrefix"
+        );
+    }
+
+    /// Dependency half of the negative gate: only this crate may declare a
+    /// C artifact crate-type (`cdylib`/`staticlib`), so no other workspace
+    /// crate can grow a symbol surface.
+    #[test]
+    fn only_native_ffi_declares_a_c_artifact_crate_type() {
+        let crates_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let mut checked = 0usize;
+        for entry in fs::read_dir(&crates_dir).expect("read crates/") {
+            let dir = entry.expect("crates entry").path();
+            let manifest = dir.join("Cargo.toml");
+            if !manifest.is_file() {
+                continue;
+            }
+            checked += 1;
+            let text = fs::read_to_string(&manifest)
+                .unwrap_or_else(|e| panic!("read {}: {e}", manifest.display()));
+            let declares_c_artifact = text.contains("cdylib") || text.contains("staticlib");
+            let is_ffi = dir.file_name().and_then(|n| n.to_str()) == Some("lumio-native-ffi");
+            assert_eq!(
+                declares_c_artifact,
+                is_ffi,
+                "{} crate-type violates the single-symbol-surface rule",
+                manifest.display()
+            );
+        }
+        assert!(checked >= 2, "expected multiple crates under crates/");
+    }
 
     #[test]
     fn root_symbol_is_absent() {

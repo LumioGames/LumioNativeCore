@@ -220,3 +220,16 @@ pub fn verify_generated_contract_revision_against(
         Err(ContractMismatch { expected, found })
     }
 }
+
+/// Drift gate for the bundle bytes: an observed bundle digest that differs
+/// from the bound `rootAbi.bundleDigest` is a contract drift, not a warning.
+/// (CI's `sha256sum -c` proves the mirror file still hashes to the pin; the
+/// crate tests prove pin == published digest == this constant.)
+pub fn verify_root_abi_bundle_digest_against(found: &'static str) -> Result<(), ContractMismatch> {
+    let expected = ROOT_ABI_BUNDLE_DIGEST;
+    if found == expected {
+        Ok(())
+    } else {
+        Err(ContractMismatch { expected, found })
+    }
+}

@@ -22,5 +22,5 @@ pub use generated::{
     AbiVersion, ArchitectureErrorCode, ArchitectureOperationId, CapabilityBits, ContractMismatch,
     LumioBuffer, LumioCoreConfigV1, LumioHandle, LumioStatus, RootAbiBinding, StructSize,
     abi_version, architecture_baseline_id, root_abi_binding, verify_generated_contract_revision,
-    verify_generated_contract_revision_against,
+    verify_generated_contract_revision_against, verify_root_abi_bundle_digest_against,
 };

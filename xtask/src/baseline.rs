@@ -232,6 +232,22 @@ fn audit_repository_policy(root: &Path, errors: &mut Vec<String>) {
     }
 }
 
+fn audit_gitattributes(root: &Path, errors: &mut Vec<String>) {
+    let rel = ".gitattributes";
+    match read(root, rel) {
+        Ok(body) => {
+            must_contain(errors, rel, &body, "/docs/architecture/abi/** text eol=lf");
+            must_contain(
+                errors,
+                rel,
+                &body,
+                "/crates/lumio-contract-types/src/generated_data.rs text eol=lf",
+            );
+        }
+        Err(e) => errors.push(e),
+    }
+}
+
 fn audit_mirror_hash(root: &Path, errors: &mut Vec<String>) {
     let sha_body = match read(root, BASELINE_SHA_REL) {
         Ok(b) => b,
@@ -280,6 +296,7 @@ pub fn audit_v14_activity_refs(root: &Path) -> Result<(), Vec<String>> {
     audit_module_readmes(root, &mut errors);
     audit_frame_header(root, &mut errors);
     audit_repository_policy(root, &mut errors);
+    audit_gitattributes(root, &mut errors);
     audit_mirror_hash(root, &mut errors);
     if errors.is_empty() {
         Ok(())

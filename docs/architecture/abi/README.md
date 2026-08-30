@@ -5,7 +5,7 @@
 ## 钉住的上游 revision（钉 revision，不钉分支名）
 
 - 上游仓库：`LumioGameEngineArchitecture`（`https://github.com/LumioGames/LumioGameEngineArchitecture.git`）
-- 镜像 revision：`origin/main` 提交 `3287bba48fc49bf89782525ad55f45b0d77ae6f1`（含内容提交 `99f94fb`，ADR-048 generated surface，2026-08-29）
+- 镜像 revision：已复核 release candidate 提交 `c7e84adfad1515933fb8621523477e81c34ce5ac`（含 LF byte-authority 提交 `2a58c0b405c4e4ed8b5f783858d01bc965228176`；四件 Root ABI 消费对象与既有发布物逐对象一致，2026-08-30）
 - 架构基线：`LGE-V1.4-2026-08-27`
 
 ## 文件清单与上游路径
@@ -30,8 +30,8 @@
 
 ## 更新流程
 
-1. 在上游仓核实目标提交已在 `origin/main`（`git branch -r --contains <rev>`）。
+1. 在上游仓核实目标提交是已复核 release candidate 或已在 `origin/main`，并钉提交而非分支名。
 2. `git show <rev>:<上游路径>` 覆盖本目录对应文件（字节级，不得手改）。
 3. 重算四个文件的 SHA-256 更新 `docs/architecture/.baseline.sha256`，并更新本文件的 revision 记录。
-4. 运行 `cargo xtask gen-contracts` 重新生成 `crates/lumio-contract-types/src/registry_data.rs`，与镜像一起提交。
+4. 运行 `cargo xtask gen-contracts` 重新生成 `crates/lumio-contract-types/src/generated_data.rs`，与镜像一起提交。
 5. 跑收口门槛（workspace 测试 + clippy + `cargo xtask check-baseline`）确认绑定测试全绿。

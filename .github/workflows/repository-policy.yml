@@ -25,6 +25,8 @@ jobs:
           test -s LICENSE
           test -s .gitattributes
           grep -q '^\*\.md text eol=lf$' .gitattributes
+          grep -Fqx '/docs/architecture/abi/** text eol=lf' .gitattributes
+          grep -Fqx '/crates/lumio-contract-types/src/generated_data.rs text eol=lf' .gitattributes
           test -s docs/architecture/LumioGameEngine_Architecture_v1.4.md
           grep -q '^## 职责$' README.md
           grep -q '^## 明确不负责什么$' README.md

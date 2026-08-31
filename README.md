@@ -83,7 +83,7 @@ contract-types（零依赖叶子）
 
 ## Native/Managed ABI 契约
 
-跨仓 Root API 符号（例如 `lumio_core_get_api_v1`）由 CoreEngine `root-abi`/composition 唯一拥有并导出；NativeCore 只提供 provider API Table 源契约，自身发布产物不导出跨仓 Root 符号（Baseline v1.4 §8.1，ADR 0001）。导出结构以 `struct_size`（必要时加独立结构版本字段）保护尾部扩展；`capability_bits` 只出现在 Root API Table 与 Capability 快照。跨边界只传固定宽度 POD、版本化 Buffer 和不透明 Handle。
+跨仓 Root API 符号（`lumio_engine_get_api_v1`）由 `LumioGameEngine` SDK 聚合层唯一拥有并导出；NativeCore 只提供 provider API 源契约，自身发布产物不导出跨仓 Root 符号。导出结构以 `struct_size` 保护尾部扩展；跨边界只传固定宽度 POD、版本化 Buffer 和不透明 Handle。
 
 - 不跨边界传 Rust/C# 容器、对象引用、异常或函数 Delegate。
 - 内存释放方按 allocator provenance 判定（谁分配谁释放，见 [`ffi-buffer-ownership.md`](docs/specs/ffi-buffer-ownership.md)）；优先使用调用方提供的 Buffer，并返回所需长度。
@@ -102,7 +102,7 @@ Kernel Worker 使用有界队列和明确 Deadline；队列满载返回可诊断
 
 ## 序列化与持久化边界
 
-NativeCore 可以提供 Canonical Buffer、Diff、压缩和校验 Kernel，但不决定 Snapshot/WAL 文件格式。Voxel、Runtime 和 Game 各自拥有领域 Schema；CoreEngine 负责把 ABI 产物纳入发布包。任何需要持久化的 Buffer 都必须带 SchemaVersion、Length、Hash/Checksum 和明确的拥有者。
+NativeCore 可以提供 Canonical Buffer、Diff、压缩和校验 Kernel，但不决定 Snapshot/WAL 文件格式。Voxel、Runtime 和 Game 各自拥有领域 Schema；`LumioGameEngine` SDK 负责把 ABI 产物纳入开发包。任何需要持久化的 Buffer 都必须带 SchemaVersion、Length、Hash/Checksum 和明确的拥有者。
 
 ## Source / Compile-Time Dependencies
 
@@ -112,7 +112,7 @@ NativeCore 可以提供 Canonical Buffer、Diff、压缩和校验 Kernel，但�
 
 ## Generated Contract Dependencies
 
-本仓库消费 `LumioGameEngineArchitecture` 发布的 Native ABI、Capability、Error Schema、Header、清单和布局测试输入；本仓库可以维护实现侧 Adapter 与本地一致性测试，但不维护第二套公共 Schema 或绑定生成器。`LumioCoreEngine` 消费这些只读产物并生成统一 Root 包和托管绑定。
+本仓库消费 `LumioGameEngine` 发布的 Native ABI、Capability、Error Schema、Header、清单和布局测试输入；本仓库可以维护实现侧 Adapter 与本地一致性测试，但不维护第二套公共 Schema 或绑定生成器。SDK 聚合层生成统一 Root 包和托管绑定。
 
 ## Runtime Loading Relationships
 

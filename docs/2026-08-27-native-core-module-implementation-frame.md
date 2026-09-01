@@ -34,6 +34,7 @@
 | platform | `lumio-platform` | 私有实现 | I0 | 单调时钟 port | 无 |
 | job | `lumio-job` | 状态机冻结 | I0→I1 | 有界队列、Typed Kernel、取消/超时 | ABI-004 |
 | spatial | `lumio-spatial` | 领域无关边界冻结 | I1 | AABB/index/batch/determinism | Operation ID |
+| timer | `lumio-timer` | ADR-055 进程内 API | I1 | Tick/Frame Manager + Server/Client adapter | 契约 JSON |
 | codec | `lumio-codec` | ADR 0005 pending | Hardening prototype | 私有 feature | ABI-007 |
 | diagnostics | `lumio-diagnostics` | ADR 0005 pending | Hardening prototype | 私有 feature | ABI-008 |
 | native-core-ffi | `lumio-native-ffi` | 唯一导出 crate 冻结 | I0 smoke→Hardening | guard/validation/generated exports | ABI-001..006 |

@@ -26,8 +26,7 @@ metadata:
 | 文档 | 一句话 |
 |------|--------|
 | [`features/_TEMPLATE.md`](features/_TEMPLATE.md) | 新功能文档模板——新增功能记录时照此建,放对 领域 / 模块 |
-
-> 暂无正式功能文档。
+| [`features/timer-manager.md`](features/timer-manager.md) | Native Tick/Frame Timer Manager 与 Server/Client adapter——查调度、CallbackSlot 或切片消费者时读 |
 
 ## lessons(经验教训 · 复发问题暂存区)
 

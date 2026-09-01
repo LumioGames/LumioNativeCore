@@ -1,0 +1,11 @@
+[package]
+name = "lumio-timer"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+lumio-platform = { path = "../lumio-platform" }
+
+[dev-dependencies]
+lumio-test-support = { path = "../lumio-test-support" }

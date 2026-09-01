@@ -78,5 +78,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lumio-timer"
+version = "0.0.0"
+dependencies = [
+ "lumio-platform",
+ "lumio-test-support",
+]
+
+[[package]]
 name = "xtask"
 version = "0.0.0"

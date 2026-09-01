@@ -32,6 +32,7 @@
 | `capability` | 平台/编译 Feature/能力位声明 | I0 | Architecture Gate / Foundation | [`README`](modules/capability/README.md) |
 | `memory` | 调用方 Buffer、Allocator 边界、内存池和统计 | I0 | Foundation | [`README`](modules/memory/README.md) |
 | `job` | 有界 Worker、Typed Job、取消、超时和 Completion Batch | I0 | Foundation | [`README`](modules/job/README.md) |
+| `timer` | 确定性 Tick/Frame Timer Manager、Server/Client adapter、CallbackSlot（进程内 ABI，ADR-055） | I0 | Foundation | [`README`](modules/timer/README.md) |
 | `kernel-context` | 生命周期根：Context 状态机、资源 registry、关闭时序 | I0 | Foundation | [`README`](modules/kernel-context/README.md) |
 | `spatial` | Grid、Hash、BVH、邻域、批量距离与碰撞基础计算 Kernel | I1 | NativeHeadless | [`README`](modules/spatial/README.md) |
 | `codec` | 纯字节压缩、校验和 Diff Kernel（pending） | I1 | NativeHeadless | [`README`](modules/codec/README.md) |
@@ -50,11 +51,12 @@ contract-types（零依赖叶子）
 ├── handle -> error
 ├── memory -> error
 ├── job -> handle + error + memory（+ 私有 clock port）
+├── timer -> 私有 clock port（Tick/Frame Manager 不读墙钟；Host timer service 用单调时钟）
 ├── kernel-context -> capability + handle + memory（定义 ContextResource port）
 ├── spatial -> error + memory
 ├── codec -> error + memory（pending）
 ├── diagnostics -> error（pending，经 record port 接入）
-└── native-core-ffi -> 全部公开模块（唯一导出面）
+└── native-core-ffi -> 公开 C ABI 模块（不含 timer：进程内 API）
 ```
 
 `job`/`spatial`/`codec` 的跨调用资源实现 ContextResource port 并注册进 `kernel-context`（编译期方向指向 kernel-context，避免环）；`spatial` 和 `codec` 可由 `job` 调度，但不编译期依赖 `job`。禁止方向由 `cargo xtask check-dep-dag` 强制。任何第三方类型都必须停留在 Adapter 内，不得进入稳定 ABI。

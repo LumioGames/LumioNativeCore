@@ -26,6 +26,8 @@ struct ScopeRecord {
     kind: ScopeKind,
     generation: u32,
     active: u32,
+    /// Tombstone after destroy: id stays mapped so the next register cannot wrap to generation 1.
+    alive: bool,
 }
 
 struct QueueItem {
@@ -166,12 +168,19 @@ impl TimerManager {
 
     pub fn register_scope(&mut self, scope_id: u64, kind: ScopeKind) -> TimerResult<TimerScope> {
         self.ensure_running()?;
-        if let Some(existing) = self.scopes.get(&scope_id) {
-            return Ok(TimerScope::new(
-                scope_id,
-                existing.kind,
-                existing.generation,
-            ));
+        if let Some(existing) = self.scopes.get_mut(&scope_id) {
+            if existing.alive {
+                return Ok(TimerScope::new(
+                    scope_id,
+                    existing.kind,
+                    existing.generation,
+                ));
+            }
+            existing.kind = kind;
+            existing.generation = bump_generation(existing.generation);
+            existing.active = 0;
+            existing.alive = true;
+            return Ok(TimerScope::new(scope_id, kind, existing.generation));
         }
         self.scopes.insert(
             scope_id,
@@ -179,6 +188,7 @@ impl TimerManager {
                 kind,
                 generation: 1,
                 active: 0,
+                alive: true,
             },
         );
         Ok(TimerScope::new(scope_id, kind, 1))
@@ -186,16 +196,40 @@ impl TimerManager {
 
     pub fn teardown_scope(&mut self, scope_id: u64) -> TimerResult<TimerScope> {
         self.ensure_running()?;
-        let mut dead = Vec::new();
         let next = {
-            let scope = self
-                .scopes
-                .get_mut(&scope_id)
-                .ok_or(TimerError::ScopeInvalid)?;
+            let scope = self.live_scope_mut(scope_id)?;
             scope.generation = bump_generation(scope.generation);
             scope.active = 0;
             TimerScope::new(scope_id, scope.kind, scope.generation)
         };
+        self.retire_scope_timers(scope_id);
+        Ok(next)
+    }
+
+    pub fn destroy_scope(&mut self, scope_id: u64) -> TimerResult<()> {
+        self.ensure_running()?;
+        {
+            let scope = self.live_scope_mut(scope_id)?;
+            scope.alive = false;
+            scope.active = 0;
+        }
+        self.retire_scope_timers(scope_id);
+        Ok(())
+    }
+
+    fn live_scope_mut(&mut self, scope_id: u64) -> TimerResult<&mut ScopeRecord> {
+        let scope = self
+            .scopes
+            .get_mut(&scope_id)
+            .ok_or(TimerError::ScopeInvalid)?;
+        if !scope.alive {
+            return Err(TimerError::ScopeInvalid);
+        }
+        Ok(scope)
+    }
+
+    fn retire_scope_timers(&mut self, scope_id: u64) {
+        let mut dead = Vec::new();
         for (index, slot) in self.timers.iter().enumerate() {
             if let Some(record) = slot.record.as_ref()
                 && record.scope_id == scope_id
@@ -216,34 +250,6 @@ impl TimerManager {
                     item.valid = false;
                 }
             }
-        }
-        Ok(next)
-    }
-
-    pub fn destroy_scope(&mut self, scope_id: u64) -> TimerResult<()> {
-        self.ensure_running()?;
-        if self.scopes.remove(&scope_id).is_none() {
-            return Err(TimerError::ScopeInvalid);
-        }
-        self.teardown_after_destroy(scope_id);
-        Ok(())
-    }
-
-    fn teardown_after_destroy(&mut self, scope_id: u64) {
-        let mut dead = Vec::new();
-        for (index, slot) in self.timers.iter().enumerate() {
-            if let Some(record) = slot.record.as_ref()
-                && record.scope_id == scope_id
-            {
-                dead.push(TimerHandle::new(
-                    index as u32,
-                    slot.generation,
-                    self.context,
-                ));
-            }
-        }
-        for handle in dead {
-            self.retire(handle);
         }
     }
 
@@ -310,6 +316,9 @@ impl TimerManager {
         let Some(rec) = self.scopes.get(&scope.scope_id()) else {
             return Err(TimerError::ScopeInvalid);
         };
+        if !rec.alive {
+            return Err(TimerError::ScopeInvalid);
+        }
         if rec.generation != scope.generation() {
             return Err(TimerError::ScopeGenerationMismatch);
         }

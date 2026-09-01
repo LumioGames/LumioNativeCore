@@ -72,3 +72,60 @@ fn scope_invalid_unknown_kind() {
         .expect_err("unknown kind");
     assert_eq!(err, TimerError::ScopeInvalid);
 }
+
+#[test]
+fn destroy_scope_then_reregister_must_not_resurrect_old_timer_scope() {
+    let (mut manager, scope, slot) = common::manager_at_tick(10);
+    assert_eq!(scope.generation, 1);
+    manager
+        .destroy_scope(scope.scope_id)
+        .expect("destroy live scope");
+    let destroyed = manager
+        .schedule_one_shot(scope, 15, slot)
+        .expect_err("destroyed scope has no live generation");
+    assert_eq!(destroyed, TimerError::ScopeInvalid);
+    assert_eq!(destroyed.as_str(), "scope_invalid");
+
+    let again = manager
+        .register_scope(scope.scope_id, ScopeKind::World)
+        .expect("reregister same scopeId");
+    assert_ne!(
+        again.generation, 1,
+        "destroy must leave a tombstone so the next live generation does not wrap to 1"
+    );
+    assert_ne!(again.generation, scope.generation);
+
+    let resurrected = manager
+        .schedule_one_shot(scope, 15, slot)
+        .expect_err("old TimerScope must not schedule on the new incarnation");
+    assert_eq!(resurrected, TimerError::ScopeGenerationMismatch);
+    assert_eq!(resurrected.as_str(), "scope_generation_mismatch");
+
+    let handle = manager
+        .schedule_one_shot(again, 16, slot)
+        .expect("new generation is live");
+    assert_eq!(manager.cancel(handle), Ok(true));
+}
+
+#[test]
+fn destroy_scope_after_advance_must_late_complete_queued() {
+    let (mut manager, scope, slot) = common::manager_at_tick(10);
+    let handle = manager
+        .schedule_one_shot(scope, 15, slot)
+        .expect("schedule");
+    let records = manager.advance(15).expect("advance produces queued firing");
+    assert_eq!(records.firings().len(), 1);
+    manager
+        .destroy_scope(scope.scope_id)
+        .expect("destroy after enqueue");
+    let drained = manager.drain();
+    assert!(
+        drained.delivered().is_empty(),
+        "destroy must not deliver queued firings, got {:?}",
+        drained.delivered()
+    );
+    assert_eq!(drained.rejections().len(), 1);
+    assert_eq!(drained.rejections()[0].code, TimerError::LateCompletion);
+    assert_eq!(drained.rejections()[0].code.as_str(), "late_completion");
+    assert_eq!(manager.cancel(handle), Err(TimerError::StaleHandle));
+}

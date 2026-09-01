@@ -40,6 +40,7 @@ fn allowed_deps() -> BTreeMap<&'static str, Vec<&'static str>> {
             "lumio-spatial",
             vec!["lumio-contract-types", "lumio-kernel"],
         ),
+        ("lumio-timer", vec!["lumio-platform"]),
         ("lumio-codec", vec!["lumio-contract-types", "lumio-kernel"]),
         (
             "lumio-diagnostics",
@@ -470,6 +471,7 @@ mod tests {
                 &["lumio-contract-types", "lumio-kernel", "lumio-platform"],
             ),
             ("lumio-spatial", &["lumio-contract-types", "lumio-kernel"]),
+            ("lumio-timer", &["lumio-platform"]),
             ("lumio-codec", &["lumio-contract-types", "lumio-kernel"]),
             (
                 "lumio-diagnostics",

@@ -37,13 +37,14 @@ error  capability  handle       memory
                           job
                            │
 spatial ──> contract-types + error + handle + memory
+timer   ──> lumio-platform（仅 Host 墙钟面；Tick/Frame Manager 不读墙钟，不进 native-core-ffi）
 codec   ──> contract-types + error + memory（有状态字典/工作区才加 handle）
 diagnostics ──> contract-types + error（其余模块经可选 record port 接入，不编译期依赖其实现）
 
 kernel-context ──> capability + handle + memory（定义 ContextResource port）
 job / spatial / codec ──实现并注册──> kernel-context 的 ContextResource port
         （编译期方向是 job -> kernel-context；Context 经 port 拥有 Worker 集/索引/工作区，避免 crate 层环）
-native-core-ffi ──> kernel-context + 各公开模块（唯一导出面）
+native-core-ffi ──> kernel-context + 各公开 C ABI 模块（不含 timer）
 ```
 
 禁止方向（lint 拒绝）：`spatial/codec -> job`、`error -> diagnostics`、`memory -> job/spatial/codec`、
@@ -59,6 +60,7 @@ native-core-ffi ──> kernel-context + 各公开模块（唯一导出面）
 | `lumio-kernel` | error、capability、handle、memory、kernel-context | rlib |
 | `lumio-job` | job | rlib |
 | `lumio-spatial` | spatial | rlib |
+| `lumio-timer` | timer（进程内 Tick/Frame Manager，ADR-055） | rlib，不进 C ABI / native-core-ffi |
 | `lumio-codec` | codec | rlib，**experimental/private**（见 §4） |
 | `lumio-diagnostics` | diagnostics | rlib，**experimental/private**（见 §4） |
 | `lumio-native-ffi` | abi（门面半边） | **唯一 `cdylib`/`staticlib`**，唯一符号导出面 |
@@ -79,5 +81,5 @@ native-core-ffi ──> kernel-context + 各公开模块（唯一导出面）
 ```
 
 当前判定：`contract-types/error/capability/handle/memory/job/kernel-context/native-core-ffi/spatial`
-= approved（V1.1 起进入上游模块地图，随当前基线确认）；`codec`、`diagnostics` = **pending**——
+= approved（V1.1 起进入上游模块地图，随当前基线确认）；`timer` = approved（ADR-055 进程内 API，不进 §16 C ABI 地图）；`codec`、`diagnostics` = **pending**——
 仓内允许 feature-gated 私有原型，**不进公共 Header/export list**，转 approved 只能由架构源批准驱动。

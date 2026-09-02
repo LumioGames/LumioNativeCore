@@ -6,8 +6,8 @@ use lumio_timer::{
     CallbackSlot, FiringRecord, ScopeKind, SlotDispatchId, TimerManager, TimerScope,
 };
 
-pub const TEST_DISPATCH: SlotDispatchId = SlotDispatchId::from_static("test.slot");
-pub const TEST_DISPATCH_B: SlotDispatchId = SlotDispatchId::from_static("test.slot.b");
+pub const TEST_DISPATCH: SlotDispatchId = SlotDispatchId::from_raw(1);
+pub const TEST_DISPATCH_B: SlotDispatchId = SlotDispatchId::from_raw(2);
 
 pub fn manager_at_tick(tick: u64) -> (TimerManager, TimerScope, CallbackSlot) {
     let mut manager = TimerManager::new(1);

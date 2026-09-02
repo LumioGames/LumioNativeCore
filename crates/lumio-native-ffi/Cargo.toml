@@ -13,6 +13,7 @@ lumio-kernel = { path = "../lumio-kernel" }
 lumio-job = { path = "../lumio-job" }
 lumio-spatial = { path = "../lumio-spatial" }
 lumio-platform = { path = "../lumio-platform" }
+lumio-timer = { path = "../lumio-timer" }
 lumio-codec = { path = "../lumio-codec", optional = true }
 lumio-diagnostics = { path = "../lumio-diagnostics", optional = true }
 

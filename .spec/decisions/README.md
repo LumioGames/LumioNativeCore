@@ -34,4 +34,5 @@
 | [0004](0004-job-state-machine-and-clock-port.md) | Job 状态机 CAS 线性化 + 私有单调时钟 port | 生效 |
 | [0005](0005-codec-diagnostics-pending-and-dual-status.md) | codec/diagnostics 维持 pending,模块引入双状态标注 | 生效 |
 | [0006](0006-capability-keys-have-no-raw-constructor.md) | Capability key 只由生成注册表投影,不保留裸构造器 | 生效 |
-| [0007](0007-timer-manager-in-process-api.md) | Timer Manager 以独立 crate 提供进程内 Tick/Frame API，不进入 C ABI | 生效 |
+| [0007](0007-timer-manager-in-process-api.md) | Timer Manager 以独立 crate 提供进程内 Tick/Frame API，不进入 C ABI | 被 0008 取代 |
+| [0008](0008-timer-kernel-enters-native-abi.md) | 唯一定时内核经 native-abi.json 导出，wallClock 与 tickFrame 为同一内核的两种模式 | 生效 |

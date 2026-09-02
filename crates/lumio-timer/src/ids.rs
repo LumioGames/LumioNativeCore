@@ -4,40 +4,66 @@ use crate::error::{TimerError, TimerResult};
 
 pub const MAX_ACTIVE_TIMERS_PER_SCOPE: u32 = 1024;
 pub const MAX_SCHEDULES_PER_TICK: u32 = 4096;
+pub const MAX_SCHEDULES_PER_PUMP: u32 = 4096;
 pub const DELIVERY_QUEUE_DEPTH_PER_SLOT: usize = 256;
 pub const MIN_INTERVAL_TICKS: u64 = 1;
+pub const MIN_INTERVAL_MS: u64 = 1;
 
 /// Frozen by R-00352: Bot chat cadence interval in ticks.
 pub const BOT_CHAT_CADENCE_TICKS: u64 = 5;
 pub const BOT_CHAT_CADENCE_INTERVAL_TICKS: u64 = BOT_CHAT_CADENCE_TICKS;
-pub const BOT_CHAT_CADENCE_DISPATCH: DispatchId =
-    DispatchId::from_static("client.bot_chat_cadence");
+pub const BOT_CHAT_CADENCE_DISPATCH: DispatchId = DispatchId::from_raw(100);
 
 /// Server occupancy/heartbeat checkpoint period selected by R-00352.
 pub const SERVER_WORLD_HEARTBEAT_TICKS: u64 = 10;
 pub const SERVER_PERIODIC_INTERVAL_TICKS: u64 = SERVER_WORLD_HEARTBEAT_TICKS;
-pub const SERVER_WORLD_HEARTBEAT_DISPATCH: DispatchId =
-    DispatchId::from_static("server.world_authority_heartbeat");
+pub const SERVER_WORLD_HEARTBEAT_DISPATCH: DispatchId = DispatchId::from_raw(101);
 
-/// Host-owned reconnect retention window (R-00350). Not a Tick/Frame interval.
+/// Reconnect retention window (R-00350) carried by kernel:wallClock, not a second timer.
 pub const RECONNECT_RETENTION_SECS: u64 = 300;
+pub const RECONNECT_RETENTION_MS: u64 = RECONNECT_RETENTION_SECS * 1000;
+pub const RECONNECT_RETENTION_DISPATCH: DispatchId = DispatchId::from_raw(102);
 
 pub type SlotDispatchId = DispatchId;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TimerMode {
+    WallClock = 0,
+    TickFrame = 1,
+}
+
+impl TimerMode {
+    pub const fn from_abi(raw: u32) -> Option<Self> {
+        match raw {
+            0 => Some(Self::WallClock),
+            1 => Some(Self::TickFrame),
+            _ => None,
+        }
+    }
+
+    pub const fn to_abi(self) -> u32 {
+        self as u32
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerLimits {
     pub max_active_timers_per_scope: u32,
     pub max_schedules_per_tick: u32,
+    pub max_schedules_per_pump: u32,
     pub delivery_queue_depth_per_slot: usize,
     pub min_interval_ticks: u64,
+    pub min_interval_ms: u64,
 }
 
 impl TimerLimits {
     pub const CONTRACT: Self = Self {
         max_active_timers_per_scope: MAX_ACTIVE_TIMERS_PER_SCOPE,
         max_schedules_per_tick: MAX_SCHEDULES_PER_TICK,
+        max_schedules_per_pump: MAX_SCHEDULES_PER_PUMP,
         delivery_queue_depth_per_slot: DELIVERY_QUEUE_DEPTH_PER_SLOT,
         min_interval_ticks: MIN_INTERVAL_TICKS,
+        min_interval_ms: MIN_INTERVAL_MS,
     };
 }
 
@@ -49,12 +75,16 @@ pub struct TimerHandle {
 }
 
 impl TimerHandle {
-    pub(crate) const fn new(index: u32, generation: u32, context: u64) -> Self {
+    pub const fn from_abi(index: u32, generation: u32, context: u64) -> Self {
         Self {
             index,
             generation,
             context,
         }
+    }
+
+    pub(crate) const fn new(index: u32, generation: u32, context: u64) -> Self {
+        Self::from_abi(index, generation, context)
     }
 
     pub const fn index(self) -> u32 {
@@ -70,39 +100,44 @@ impl TimerHandle {
     }
 }
 
-/// Pre-registered dispatch destination. Not a function pointer.
+/// Pre-registered dispatch destination. Integer id, never a function pointer.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct DispatchId(&'static str);
+pub struct DispatchId(u32);
 
 impl DispatchId {
     pub const BOT_CHAT_CADENCE: Self = BOT_CHAT_CADENCE_DISPATCH;
     pub const SERVER_PERIODIC_CHECKPOINT: Self = SERVER_WORLD_HEARTBEAT_DISPATCH;
-
-    pub const fn from_static(id: &'static str) -> Self {
-        Self(id)
-    }
+    pub const RECONNECT_RETENTION: Self = RECONNECT_RETENTION_DISPATCH;
 
     pub const fn from_raw(raw: u32) -> Self {
-        match raw {
-            1 => Self("test.slot"),
-            2 => Self("test.slot.b"),
-            100 => BOT_CHAT_CADENCE_DISPATCH,
-            101 => SERVER_WORLD_HEARTBEAT_DISPATCH,
-            _ => Self("test.unknown"),
+        Self(raw)
+    }
+
+    pub fn from_static(id: &'static str) -> Self {
+        match id {
+            "test.slot" => Self(1),
+            "test.slot.b" => Self(2),
+            "test.other" => Self(3),
+            "client.bot_chat_cadence" => Self(100),
+            "server.world_authority_heartbeat" => Self(101),
+            "server.reconnect_retention" => Self(102),
+            _ => Self(0),
         }
     }
 
-    pub const fn as_str(self) -> &'static str {
+    pub const fn raw(self) -> u32 {
         self.0
     }
 
-    pub fn raw(self) -> u32 {
+    pub const fn as_str(self) -> &'static str {
         match self.0 {
-            "test.slot" => 1,
-            "test.slot.b" => 2,
-            "client.bot_chat_cadence" => 100,
-            "server.world_authority_heartbeat" => 101,
-            _ => 0,
+            1 => "test.slot",
+            2 => "test.slot.b",
+            3 => "test.other",
+            100 => "client.bot_chat_cadence",
+            101 => "server.world_authority_heartbeat",
+            102 => "server.reconnect_retention",
+            _ => "test.unknown",
         }
     }
 }
@@ -121,8 +156,12 @@ pub struct CallbackSlot {
 }
 
 impl CallbackSlot {
-    pub(crate) const fn new(index: u32, generation: u32) -> Self {
+    pub const fn from_abi(index: u32, generation: u32) -> Self {
         Self { index, generation }
+    }
+
+    pub(crate) const fn new(index: u32, generation: u32) -> Self {
+        Self::from_abi(index, generation)
     }
 
     pub const fn index(self) -> u32 {
@@ -257,6 +296,7 @@ impl AdvanceReport {
 pub struct DrainReport {
     delivered: Vec<Delivery>,
     rejections: Vec<FiringRejection>,
+    records: Vec<FiringRecord>,
 }
 
 impl DrainReport {
@@ -268,8 +308,16 @@ impl DrainReport {
         &self.rejections
     }
 
+    pub fn records(&self) -> &[FiringRecord] {
+        &self.records
+    }
+
     pub(crate) fn push_delivery(&mut self, delivery: Delivery) {
         self.delivered.push(delivery);
+    }
+
+    pub(crate) fn push_record(&mut self, record: FiringRecord) {
+        self.records.push(record);
     }
 
     pub(crate) fn push_rejection(&mut self, rejection: FiringRejection) {
@@ -292,8 +340,14 @@ pub struct TimerDiagnostic {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SlotLifecycle {
+    Unbound,
+    Armed,
+    Closed,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimingLayer {
-    HostTimerService,
     ClientTimerManager,
     ServerTimerManager,
 }
@@ -310,9 +364,6 @@ pub enum SliceTraceEvent {
     Dispatched {
         dispatch_id: DispatchId,
         due_tick: u64,
-    },
-    HostReconnectExpired {
-        host_nanos: u64,
     },
 }
 

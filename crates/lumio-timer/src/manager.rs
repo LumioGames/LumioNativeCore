@@ -5,8 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::error::{TimerError, TimerResult};
 use crate::ids::{
     AdvanceReport, CallbackSlot, Delivery, DispatchId, DispatchTarget, DrainReport, FiringRecord,
-    FiringRejection, ScopeKind, SliceTrace, SliceTraceEvent, TimerDiagnostic, TimerHandle,
-    TimerKind, TimerLimits, TimerScope, bump_generation, due_in_window,
+    FiringRejection, ScopeKind, SliceTrace, SliceTraceEvent, SlotLifecycle, TimerDiagnostic,
+    TimerHandle, TimerKind, TimerLimits, TimerMode, TimerScope, bump_generation, due_in_window,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -61,6 +61,7 @@ struct TimerSlot {
 
 pub struct TimerManager {
     context: u64,
+    mode: TimerMode,
     limits: TimerLimits,
     running: bool,
     committed_tick: u64,
@@ -77,12 +78,21 @@ pub struct TimerManager {
 
 impl TimerManager {
     pub fn new(context: u64) -> Self {
-        Self::with_limits(context, TimerLimits::CONTRACT)
+        Self::with_mode(context, TimerMode::TickFrame)
+    }
+
+    pub fn with_mode(context: u64, mode: TimerMode) -> Self {
+        Self::with_mode_and_limits(context, mode, TimerLimits::CONTRACT)
     }
 
     pub fn with_limits(context: u64, limits: TimerLimits) -> Self {
+        Self::with_mode_and_limits(context, TimerMode::TickFrame, limits)
+    }
+
+    pub fn with_mode_and_limits(context: u64, mode: TimerMode, limits: TimerLimits) -> Self {
         Self {
             context,
+            mode,
             limits,
             running: true,
             committed_tick: 0,
@@ -131,6 +141,31 @@ impl TimerManager {
 
     pub fn committed_tick(&self) -> u64 {
         self.committed_tick
+    }
+
+    pub fn mode(&self) -> TimerMode {
+        self.mode
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.running
+    }
+
+    pub fn is_scope_alive(&self, scope_id: u64) -> bool {
+        self.scopes.get(&scope_id).is_some_and(|s| s.alive)
+    }
+
+    pub fn is_dispatch_registered(&self, id: DispatchId) -> bool {
+        self.dispatch_table.contains(&id)
+    }
+
+    pub fn slot_lifecycle(&self, slot: CallbackSlot) -> TimerResult<SlotLifecycle> {
+        let rec = self.slot(slot)?;
+        Ok(match rec.state {
+            SlotState::Unbound => SlotLifecycle::Unbound,
+            SlotState::Armed => SlotLifecycle::Armed,
+            SlotState::Closed => SlotLifecycle::Closed,
+        })
     }
 
     pub fn live_timer_count(&self) -> u32 {
@@ -281,11 +316,17 @@ impl TimerManager {
     pub fn close_slot(&mut self, slot: CallbackSlot) -> TimerResult<()> {
         self.ensure_running()?;
         let rec = self.slot_mut(slot)?;
-        rec.state = SlotState::Closed;
-        for item in &mut rec.queue {
-            item.valid = false;
+        match rec.state {
+            SlotState::Unbound => Err(TimerError::SlotUnbound),
+            SlotState::Closed => Err(TimerError::SlotClosed),
+            SlotState::Armed => {
+                rec.state = SlotState::Closed;
+                for item in &mut rec.queue {
+                    item.valid = false;
+                }
+                Ok(())
+            }
         }
-        Ok(())
     }
 
     fn slot(&self, slot: CallbackSlot) -> TimerResult<&SlotRecord> {
@@ -351,7 +392,11 @@ impl TimerManager {
         slot: CallbackSlot,
     ) -> TimerResult<TimerHandle> {
         self.ensure_running()?;
-        if interval_ticks < self.limits.min_interval_ticks {
+        let min_interval = match self.mode {
+            TimerMode::TickFrame => self.limits.min_interval_ticks,
+            TimerMode::WallClock => self.limits.min_interval_ms,
+        };
+        if interval_ticks < min_interval {
             return Err(TimerError::InvalidInterval);
         }
         self.schedule(scope, first_due_tick, Some(interval_ticks), slot)
@@ -370,7 +415,11 @@ impl TimerManager {
         if due_tick <= self.committed_tick {
             return Err(TimerError::InvalidDueTick);
         }
-        if self.schedules_this_tick >= self.limits.max_schedules_per_tick {
+        let max_schedules = match self.mode {
+            TimerMode::TickFrame => self.limits.max_schedules_per_tick,
+            TimerMode::WallClock => self.limits.max_schedules_per_pump,
+        };
+        if self.schedules_this_tick >= max_schedules {
             return Err(TimerError::ScheduleBudgetExceeded);
         }
         let active = self
@@ -468,6 +517,10 @@ impl TimerManager {
                 }
             }
         }
+    }
+
+    pub fn pump(&mut self, now_ms: u64) -> TimerResult<AdvanceReport> {
+        self.advance(now_ms)
     }
 
     pub fn advance(&mut self, to_tick: u64) -> TimerResult<AdvanceReport> {
@@ -602,8 +655,31 @@ impl TimerManager {
         Ok(())
     }
 
+    pub fn pending_record_count(&self) -> u32 {
+        self.slots
+            .iter()
+            .map(|slot| {
+                if slot.state == SlotState::Closed {
+                    0
+                } else {
+                    slot.queue.iter().filter(|item| item.valid).count()
+                }
+            })
+            .sum::<usize>() as u32
+    }
+
+    pub fn drain_records(&mut self) -> TimerResult<Vec<FiringRecord>> {
+        self.ensure_running()?;
+        Ok(self.drain_internal(false).records().to_vec())
+    }
+
     pub fn drain(&mut self) -> DrainReport {
+        self.drain_internal(true)
+    }
+
+    fn drain_internal(&mut self, emit_trace: bool) -> DrainReport {
         let mut report = DrainReport::default();
+        let mut pending: Vec<(DispatchId, QueueItem)> = Vec::new();
         let slot_count = self.slots.len();
         for index in 0..slot_count {
             let queue = std::mem::take(&mut self.slots[index].queue);
@@ -642,11 +718,24 @@ impl TimerManager {
                     self.retire(item.record.handle);
                     continue;
                 }
-                report.push_delivery(Delivery {
-                    dispatch_id: id,
-                    due_tick: item.record.due_tick,
-                    handle: item.record.handle,
-                });
+                pending.push((id, item));
+            }
+        }
+        pending.sort_by_key(|(_, item)| {
+            (
+                item.record.due_tick,
+                item.record.schedule_sequence,
+                item.record.handle.index(),
+            )
+        });
+        for (id, item) in pending {
+            report.push_record(item.record);
+            report.push_delivery(Delivery {
+                dispatch_id: id,
+                due_tick: item.record.due_tick,
+                handle: item.record.handle,
+            });
+            if emit_trace {
                 self.trace.push(SliceTraceEvent::Dispatched {
                     dispatch_id: id,
                     due_tick: item.record.due_tick,
@@ -662,13 +751,13 @@ impl TimerManager {
                         live_timers: item.live_timers_at_fire,
                     });
                 }
-                let one_shot = self
-                    .get_timer(item.record.handle)
-                    .map(|t| t.kind == TimerKind::OneShot)
-                    .unwrap_or(false);
-                if one_shot {
-                    self.retire(item.record.handle);
-                }
+            }
+            let one_shot = self
+                .get_timer(item.record.handle)
+                .map(|t| t.kind == TimerKind::OneShot)
+                .unwrap_or(false);
+            if one_shot {
+                self.retire(item.record.handle);
             }
         }
         report

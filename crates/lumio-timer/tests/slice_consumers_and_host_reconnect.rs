@@ -1,15 +1,10 @@
-//! Slice consumers: Bot cadence on Client Timer Manager, server periodic on
-//! Server Timer Manager, five-minute reconnect on Host timer service.
+//! Slice consumers: Bot cadence and server periodic on tickFrame adapters;
+//! five-minute reconnect on the same kernel in wallClock mode.
 
-use std::sync::Arc;
-use std::time::Duration;
-
-use lumio_platform::{MonotonicClock, Ticks};
-use lumio_test_support::FakeClock;
 use lumio_timer::{
-    BOT_CHAT_CADENCE_TICKS, ClientTimerManager, HostCommandKind, HostTimerService,
-    RECONNECT_RETENTION_SECS, SERVER_WORLD_HEARTBEAT_TICKS, ScopeKind, ServerTimerManager,
-    SliceTrace, SliceTraceEvent,
+    BOT_CHAT_CADENCE_TICKS, ClientTimerManager, RECONNECT_RETENTION_DISPATCH,
+    RECONNECT_RETENTION_MS, SERVER_WORLD_HEARTBEAT_TICKS, ScopeKind, ServerTimerManager,
+    SliceTraceEvent, TimerManager, TimerMode,
 };
 
 #[test]
@@ -56,12 +51,10 @@ fn server_periodic_task_runs_on_server_timer_manager() {
 }
 
 #[test]
-fn reconnect_deadline_stays_on_host_timer_service() {
-    let clock = Arc::new(FakeClock::new(Ticks::ZERO));
-    let mut host = HostTimerService::new(Arc::clone(&clock) as Arc<dyn MonotonicClock>);
+fn reconnect_deadline_runs_on_kernel_wall_clock() {
+    let mut wall = TimerManager::with_mode(3, TimerMode::WallClock);
     let mut client = ClientTimerManager::new(1);
     let mut server = ServerTimerManager::new(2);
-    let mut trace = SliceTrace::new();
 
     let client_scope = client
         .register_scope(ScopeKind::Adapter, 1)
@@ -76,36 +69,43 @@ fn reconnect_deadline_stays_on_host_timer_service() {
         .schedule_world_heartbeat(server_scope)
         .expect("heartbeat");
 
-    let _key = host
-        .schedule_reconnect_retention(42)
-        .expect("host reconnect window");
+    let wall_scope = wall
+        .register_scope(1, ScopeKind::Session)
+        .expect("wall scope");
+    let wall_slot = wall.create_slot().expect("wall slot");
+    wall.bind_slot(wall_slot, RECONNECT_RETENTION_DISPATCH)
+        .expect("bind reconnect");
+    let handle = wall
+        .schedule_one_shot(wall_scope, RECONNECT_RETENTION_MS, wall_slot)
+        .expect("reconnect window");
 
     client.pump(20).expect("native client ticks");
     server.pump(20).expect("native server ticks");
-    let early = host
-        .poll_into(&mut trace)
-        .expect("poll before five minutes");
+    let early = wall
+        .pump(RECONNECT_RETENTION_MS - 1)
+        .expect("pump before five minutes");
     assert!(
-        early.is_empty(),
-        "tick advance must not fire the host reconnect deadline"
+        early.firings().is_empty(),
+        "tick advance must not fire the wallClock reconnect deadline"
     );
-    assert!(trace.events().is_empty());
+    assert!(wall.drain_records().expect("drain early").is_empty());
     assert!(!client.trace().bot_utterance_ticks().is_empty());
     assert!(!server.trace().server_checkpoint_ticks().is_empty());
 
-    clock.advance(Duration::from_secs(RECONNECT_RETENTION_SECS - 1));
-    assert!(host.poll().expect("poll at 299s").is_empty());
-    clock.advance(Duration::from_secs(1));
-    let expired = host.poll_into(&mut trace).expect("poll at 300s");
-    assert_eq!(expired.len(), 1);
+    let expired = wall.pump(RECONNECT_RETENTION_MS).expect("pump at 300s");
+    assert_eq!(expired.firings().len(), 1);
+    assert_eq!(expired.firings()[0].handle, handle);
     assert_eq!(
-        expired[0].kind,
-        HostCommandKind::ReconnectRetentionExpired { retention_id: 42 }
+        expired.firings()[0].slot_dispatch_id,
+        RECONNECT_RETENTION_DISPATCH
     );
-    assert!(matches!(
-        trace.events()[0],
-        SliceTraceEvent::HostReconnectExpired { .. }
-    ));
+    let records = wall.drain_records().expect("drain reconnect");
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].due_tick, RECONNECT_RETENTION_MS);
+    assert_eq!(
+        wall.cancel(handle),
+        Err(lumio_timer::TimerError::StaleHandle)
+    );
     assert!(
         client
             .trace()

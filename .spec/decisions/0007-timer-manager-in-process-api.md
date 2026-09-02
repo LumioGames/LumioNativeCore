@@ -1,7 +1,7 @@
 # 0007 · Timer Manager 以独立 crate 提供进程内 Tick/Frame API，不进入 C ABI
 
 - 日期:2026-09-01
-- 状态:生效
+- 状态:被 0008 取代
 
 ## 背景
 

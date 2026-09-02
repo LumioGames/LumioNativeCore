@@ -679,6 +679,7 @@ impl TimerManager {
 
     fn drain_internal(&mut self, emit_trace: bool) -> DrainReport {
         let mut report = DrainReport::default();
+        let mut pending: Vec<(DispatchId, QueueItem)> = Vec::new();
         let slot_count = self.slots.len();
         for index in 0..slot_count {
             let queue = std::mem::take(&mut self.slots[index].queue);
@@ -717,36 +718,46 @@ impl TimerManager {
                     self.retire(item.record.handle);
                     continue;
                 }
-                report.push_record(item.record);
-                report.push_delivery(Delivery {
+                pending.push((id, item));
+            }
+        }
+        pending.sort_by_key(|(_, item)| {
+            (
+                item.record.due_tick,
+                item.record.schedule_sequence,
+                item.record.handle.index(),
+            )
+        });
+        for (id, item) in pending {
+            report.push_record(item.record);
+            report.push_delivery(Delivery {
+                dispatch_id: id,
+                due_tick: item.record.due_tick,
+                handle: item.record.handle,
+            });
+            if emit_trace {
+                self.trace.push(SliceTraceEvent::Dispatched {
                     dispatch_id: id,
                     due_tick: item.record.due_tick,
-                    handle: item.record.handle,
                 });
-                if emit_trace {
-                    self.trace.push(SliceTraceEvent::Dispatched {
-                        dispatch_id: id,
+                if id == DispatchId::BOT_CHAT_CADENCE {
+                    self.trace.push(SliceTraceEvent::BotUtteranceSubmit {
                         due_tick: item.record.due_tick,
                     });
-                    if id == DispatchId::BOT_CHAT_CADENCE {
-                        self.trace.push(SliceTraceEvent::BotUtteranceSubmit {
-                            due_tick: item.record.due_tick,
-                        });
-                    }
-                    if id == DispatchId::SERVER_PERIODIC_CHECKPOINT {
-                        self.trace.push(SliceTraceEvent::ServerPeriodicCheckpoint {
-                            due_tick: item.record.due_tick,
-                            live_timers: item.live_timers_at_fire,
-                        });
-                    }
                 }
-                let one_shot = self
-                    .get_timer(item.record.handle)
-                    .map(|t| t.kind == TimerKind::OneShot)
-                    .unwrap_or(false);
-                if one_shot {
-                    self.retire(item.record.handle);
+                if id == DispatchId::SERVER_PERIODIC_CHECKPOINT {
+                    self.trace.push(SliceTraceEvent::ServerPeriodicCheckpoint {
+                        due_tick: item.record.due_tick,
+                        live_timers: item.live_timers_at_fire,
+                    });
                 }
+            }
+            let one_shot = self
+                .get_timer(item.record.handle)
+                .map(|t| t.kind == TimerKind::OneShot)
+                .unwrap_or(false);
+            if one_shot {
+                self.retire(item.record.handle);
             }
         }
         report

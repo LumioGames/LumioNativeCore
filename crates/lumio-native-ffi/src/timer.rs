@@ -857,6 +857,92 @@ mod tests {
     }
 
     #[test]
+    fn managed_drain_follows_due_and_sequence_not_slot_index() {
+        let manager = unsafe { create(1) };
+        assert_eq!(
+            unsafe { timer_register_dispatch(manager, 1) },
+            STATUS_SUCCESS
+        );
+        assert_eq!(
+            unsafe { timer_register_dispatch(manager, 2) },
+            STATUS_SUCCESS
+        );
+        let mut generation = 0u32;
+        assert_eq!(
+            unsafe { timer_register_scope(manager, 1, 0, &mut generation) },
+            STATUS_SUCCESS
+        );
+        let mut slot_a = core::ptr::null_mut();
+        let mut slot_b = core::ptr::null_mut();
+        assert_eq!(
+            unsafe { timer_create_slot(manager, &mut slot_a) },
+            STATUS_SUCCESS
+        );
+        assert_eq!(
+            unsafe { timer_create_slot(manager, &mut slot_b) },
+            STATUS_SUCCESS
+        );
+        assert_eq!(
+            unsafe { timer_bind_slot(manager, slot_a, 1) },
+            STATUS_SUCCESS
+        );
+        assert_eq!(
+            unsafe { timer_bind_slot(manager, slot_b, 2) },
+            STATUS_SUCCESS
+        );
+
+        let mut handle_b = TimerHandleAbi {
+            index: 0,
+            generation: 0,
+            context: 0,
+        };
+        let mut handle_a = TimerHandleAbi {
+            index: 0,
+            generation: 0,
+            context: 0,
+        };
+        assert_eq!(
+            unsafe { timer_schedule_one_shot(manager, 1, 0, generation, 5, slot_b, &mut handle_b) },
+            STATUS_SUCCESS
+        );
+        assert_eq!(
+            unsafe {
+                timer_schedule_one_shot(manager, 1, 0, generation, 10, slot_a, &mut handle_a)
+            },
+            STATUS_SUCCESS
+        );
+        assert_eq!(unsafe { timer_advance(manager, 10) }, STATUS_SUCCESS);
+
+        let mut count = 0u32;
+        let mut records = [TimerDrainRecord {
+            handle_index: 0,
+            handle_generation: 0,
+            handle_context: 0,
+            due: 0,
+            schedule_sequence: 0,
+            slot_dispatch_id: 0,
+            pad: 0,
+        }; 4];
+        assert_eq!(
+            unsafe { timer_drain(manager, records.as_mut_ptr(), 4, &mut count) },
+            STATUS_SUCCESS
+        );
+        assert_eq!(count, 2);
+        assert_eq!(records[0].due, 5);
+        assert_eq!(records[0].slot_dispatch_id, 2);
+        assert_eq!(records[0].handle_index, handle_b.index);
+        assert_eq!(records[0].handle_generation, handle_b.generation);
+        assert_eq!(records[1].due, 10);
+        assert_eq!(records[1].slot_dispatch_id, 1);
+        assert_eq!(records[1].handle_index, handle_a.index);
+        assert!(
+            records[0].schedule_sequence < records[1].schedule_sequence,
+            "drain must follow scheduleSequence, not slot create order"
+        );
+        assert_eq!(unsafe { timer_destroy_manager(manager) }, STATUS_SUCCESS);
+    }
+
+    #[test]
     fn managed_tick_frame_rejects_pump_and_isolates_handles() {
         let wall = unsafe { create(0) };
         let ticks = unsafe { create(1) };

@@ -16,8 +16,8 @@ metadata:
 
 ## 所有权边界
 
-- 本仓拥有通用 Handle/Buffer、Allocator、Job/Queue、KernelContext 生命周期、空间/碰撞 Kernel、确定性 Tick/Frame Timer Manager（ADR-055 进程内 ABI，不进 C ABI），以及处于 pending 的 Codec/Diagnostics 原型（ADR 0005）。
-- 时间：私有可注入 monotonic clock port（ADR 0004）供 Host 墙钟 / Job deadline；Tick/Frame Timer Manager 只认确定性问题刻度，不拥有 Wall Clock（归 Host）或 TickId（归 Runtime）；时钟读数只进诊断，不进权威 Hash。
+- 本仓拥有通用 Handle/Buffer、Allocator、Job/Queue、KernelContext 生命周期、空间/碰撞 Kernel、单一定时内核（ADR-056 §7 / ADR 0008：wallClock + tickFrame，经 `native-abi.json` 的 `timer_*` 槽导出），以及处于 pending 的 Codec/Diagnostics 原型（ADR 0005）。
+- 时间：私有可注入 monotonic clock port（ADR 0004）供 Job deadline；定时内核 wallClock 模式拥有单调毫秒到期，tickFrame 模式只认确定性问题刻度；不拥有 TickId（归 Runtime）；时钟读数只进诊断，不进权威 Hash。各层 Timer Manager 只是适配器。
 - 本仓不拥有 VoxelWorld/Chunk、ECS、Gameplay、Session、网络、Host 或产品语义；任何优化都必须保持领域无关。
 - 公共边界是批处理、版本化、可取消的 C ABI；托管调用只能消费生成 Binding，不得持有裸指针或内部 Rust 引用。
 - 第三方 crate 经 Adapter 隔离并锁定版本/Commit，不能把供应商类型写进稳定 ABI。

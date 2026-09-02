@@ -1,15 +1,18 @@
-//! Consume origin/main `2b7e321` native-timer-abi-v1.json as the semantic source.
+//! Consume Arch `936046a` C-4′ native-timer-abi-v1.json as the semantic source.
 
 mod common;
 
-const TEST_CASES: [&str; 4] = [
+const TEST_CASES: [&str; 7] = [
     "one_shot_fires_exactly_once",
     "repeating_fires_each_interval",
     "cancel_prevents_delivery",
     "delivery_order_stable_and_replayable",
+    "wall_clock_one_shot_fires_exactly_once_on_pump",
+    "pump_rejected_on_tick_frame_manager",
+    "advance_rejected_on_wall_clock_manager",
 ];
 
-const INVALID_CASES: [&str; 18] = [
+const INVALID_CASES: [&str; 19] = [
     "stale_handle_never_fuzzy_matches",
     "scope_reset_invalidates_all_handles",
     "scope_generation_mismatch_at_schedule",
@@ -25,26 +28,30 @@ const INVALID_CASES: [&str; 18] = [
     "invalid_interval_rejected",
     "invalid_due_tick_at_schedule",
     "advance_rollback_rejected",
+    "wall_clock_pump_rollback_rejected",
     "schedule_budget_exceeded_no_partial_schedule",
     "max_schedules_per_tick_exceeded",
     "generation_overflow_is_fatal",
 ];
 
 #[test]
-fn contract_mirror_is_frozen_c4_revision() {
+fn contract_mirror_is_frozen_c4_prime_revision() {
     let text = common::abi_text();
-    assert_eq!(text.len(), 36021);
+    assert_eq!(text.len(), 48830);
     assert!(text.starts_with("{\n  \"contractId\": \"lumio.native-timer-abi.v1\""));
     assert!(!text.contains('\r'), "mirrored ABI must be LF-only");
     assert_eq!(lumio_timer::CONTRACT_ID, "lumio.native-timer-abi.v1");
-    assert_eq!(lumio_timer::CONTRACT_REVISION, "2b7e321");
+    assert_eq!(lumio_timer::CONTRACT_REVISION, "936046a");
     assert!(text.contains("(committedTick, toTick]"));
     assert!(text.contains("dueTick == toTick 必须开火"));
     assert!(text.contains("恰在 12、17 与 22 三刻各触发一次"));
     assert!(text.contains("\"kind\": \"in-process-api-contract\""));
-    assert!(text.contains("Client Timer Manager"));
-    assert!(text.contains("Server Timer Manager"));
-    assert!(text.contains("hostTimerService"));
+    assert!(text.contains("kernel:wallClock"));
+    assert!(text.contains("kernel:tickFrame"));
+    assert!(text.contains("\"managerHandleAfterDestroy\": \"shutdown-tombstone\""));
+    assert!(text.contains("\"slotDispatchId\": \"u32\""));
+    assert!(text.contains("timer_destroy_manager"));
+    assert!(!text.contains("hostTimerService"));
     for name in TEST_CASES {
         assert!(
             text.contains(&format!("\"name\": \"{name}\"")),
@@ -57,6 +64,6 @@ fn contract_mirror_is_frozen_c4_revision() {
             "missing invalidCase {name}"
         );
     }
-    assert_eq!(TEST_CASES.len(), 4);
-    assert_eq!(INVALID_CASES.len(), 18);
+    assert_eq!(TEST_CASES.len(), 7);
+    assert_eq!(INVALID_CASES.len(), 19);
 }

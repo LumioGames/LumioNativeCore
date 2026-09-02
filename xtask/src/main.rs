@@ -40,7 +40,7 @@ fn allowed_deps() -> BTreeMap<&'static str, Vec<&'static str>> {
             "lumio-spatial",
             vec!["lumio-contract-types", "lumio-kernel"],
         ),
-        ("lumio-timer", vec!["lumio-platform"]),
+        ("lumio-timer", vec![]),
         ("lumio-codec", vec!["lumio-contract-types", "lumio-kernel"]),
         (
             "lumio-diagnostics",
@@ -54,6 +54,7 @@ fn allowed_deps() -> BTreeMap<&'static str, Vec<&'static str>> {
                 "lumio-job",
                 "lumio-spatial",
                 "lumio-platform",
+                "lumio-timer",
                 // 仅 experimental feature 下可出现（pending 模块，ADR 0005）：
                 "lumio-codec",
                 "lumio-diagnostics",
@@ -471,7 +472,7 @@ mod tests {
                 &["lumio-contract-types", "lumio-kernel", "lumio-platform"],
             ),
             ("lumio-spatial", &["lumio-contract-types", "lumio-kernel"]),
-            ("lumio-timer", &["lumio-platform"]),
+            ("lumio-timer", &[]),
             ("lumio-codec", &["lumio-contract-types", "lumio-kernel"]),
             (
                 "lumio-diagnostics",
@@ -485,6 +486,7 @@ mod tests {
                     "lumio-job",
                     "lumio-spatial",
                     "lumio-platform",
+                    "lumio-timer",
                 ],
             ),
             (

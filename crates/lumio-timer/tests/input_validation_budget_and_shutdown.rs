@@ -91,4 +91,6 @@ fn manager_shutdown_rejects_all_operations() {
         manager.cancel(handle).unwrap_err().as_str(),
         "manager_shutdown"
     );
+    assert_eq!(manager.drain_records(), Err(TimerError::ManagerShutdown));
+    assert_eq!(manager.pump(30), Err(TimerError::ManagerShutdown));
 }

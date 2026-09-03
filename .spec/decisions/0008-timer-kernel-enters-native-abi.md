@@ -23,3 +23,7 @@ C-4′（Arch `936046a`，DEFINITION_SHA256 `ee2f6c6dc2e73a58561ba82325bc1c7c12f
 - `lumio-native-ffi -> lumio-timer` 成为批准依赖；`lumio-timer` 不再依赖 `lumio-platform`。
 - 消费方契约（TimerHandle、投递保证、错误码）以 C-4′ JSON + `native-abi.json` 为真值。
 - 各层 Timer Manager 只做适配：注册 scope/dispatch、绑定 slot、drain。不得另建内核。
+
+## 修订记录（2026-09-03，ADR-057 第 9 条）
+
+C ABI 插头归架构仓 `engine/native/modules/sdk-native/src/timer.rs`（经 `lumio_engine_get_api_v1` 装载）。本仓只保留 `lumio-timer` 纯 Rust 内核（manager / slot / schedule / cancel / advance / pump / drain）。删除 `lumio-native-ffi` 的 `timer_*` extern 与 `provider_engine_root_api` 死副本，以及 ADR 0007 时代的 `ClientTimerManager` / `ServerTimerManager` 适配器。既有正文不改写。

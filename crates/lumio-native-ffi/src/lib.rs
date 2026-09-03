@@ -18,12 +18,6 @@ pub use handles::decode_handle_for_context;
 mod exports;
 pub use exports::{LumioCoreApi, provider_core_api_table, smoke_decode_handle};
 
-mod timer;
-pub use timer::{
-    LumioEngineRootApiV1, NATIVE_ABI_DEFINITION_SHA256, TimerDrainRecord, TimerHandleAbi,
-    map_timer_error, provider_engine_root_api,
-};
-
 mod symbol_guard;
 pub use symbol_guard::{
     crate_sources_contain_root_symbol, forbidden_root_symbol_name, mirror_entry_symbol,

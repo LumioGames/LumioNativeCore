@@ -1,16 +1,15 @@
 //! Native single timer kernel (ADR-056 §7 / `lumio.native-timer-abi.v1`).
 //!
 //! Dual mode: `wallClock` (`pump`) and `tickFrame` (`advance`). Shared
-//! handle / slot / error vocabulary. C ABI is exported by `lumio-native-ffi`.
+//! handle / slot / error vocabulary. C ABI is owned by the architecture
+//! repository; this crate is the pure Rust kernel.
 
 #![forbid(unsafe_code)]
 
-mod adapter;
 mod error;
 mod ids;
 mod manager;
 
-pub use adapter::{ClientTimerManager, ServerTimerManager};
 pub use error::{TimerError, TimerResult};
 pub use ids::{
     AdvanceReport, BOT_CHAT_CADENCE_DISPATCH, BOT_CHAT_CADENCE_INTERVAL_TICKS,
@@ -21,7 +20,6 @@ pub use ids::{
     RECONNECT_RETENTION_SECS, SERVER_PERIODIC_INTERVAL_TICKS, SERVER_WORLD_HEARTBEAT_DISPATCH,
     SERVER_WORLD_HEARTBEAT_TICKS, ScopeKind, SliceTrace, SliceTraceEvent, SlotDispatchId,
     SlotLifecycle, TimerDiagnostic, TimerHandle, TimerKind, TimerLimits, TimerMode, TimerScope,
-    TimingLayer,
 };
 pub use manager::TimerManager;
 

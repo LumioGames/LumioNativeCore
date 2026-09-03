@@ -347,12 +347,6 @@ pub enum SlotLifecycle {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TimingLayer {
-    ClientTimerManager,
-    ServerTimerManager,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SliceTraceEvent {
     BotUtteranceSubmit {
         due_tick: u64,

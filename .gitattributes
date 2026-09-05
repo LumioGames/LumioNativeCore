@@ -1,11 +1,4 @@
 * text=auto
 *.md text eol=lf
-*.sha256 text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
-
-# Byte authority for pinned architecture mirrors and derived Rust data.
-/docs/architecture/abi/** text eol=lf
-/docs/architecture/wire/** text eol=lf
-/crates/lumio-native-ffi/native-abi.json text eol=lf
-/crates/lumio-contract-types/src/generated_data.rs text eol=lf

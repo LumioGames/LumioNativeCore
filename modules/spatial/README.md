@@ -2,12 +2,9 @@
 
 > 提供领域无关的 Grid、Hash、BVH、邻域查询、批量距离与碰撞基础计算 Kernel。
 
-**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图首批）  
 **RepositoryDeliveryPhase**：NativeHeadless  
 **ImplementationPriority**：I1  
-**架构基线**：`LGE-V1.4-2026-08-27`
 
-BaselineStatus 与交付批次相互独立：`spatial` 在基线首批地图内，本仓按 NativeHeadless 批次交付。
 
 ## 负责范围
 
@@ -29,7 +26,7 @@ BaselineStatus 与交付批次相互独立：`spatial` 在基线首批地图内�
 
 ## 依赖与约束
 
-依赖 `contract-types`、`error` 和 `memory`；不编译期依赖 `job`——空间算子作为 operation 经 registry 运行时绑定，跨调用索引作为 ContextResource 注册进 `kernel-context` 并随 Context 关闭失效（ADR 0002）。第三方空间库通过 Adapter 隔离。确定性输出必须使用显式排序规则，不把线程时序或地址纳入权威 Hash。
+依赖 `error` 和 `memory`；不编译期依赖 `job`——空间算子作为 operation 经 registry 运行时绑定，跨调用索引作为 ContextResource 注册进 `kernel-context` 并随 Context 关闭失效（ADR 0002）。第三方空间库通过 Adapter 隔离。确定性输出必须使用显式排序规则，不把线程时序或地址纳入权威 Hash。
 
 ## 线程、错误与观测
 

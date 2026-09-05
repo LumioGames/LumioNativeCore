@@ -2,10 +2,8 @@
 
 > 管理调用方 Buffer、Allocator 边界、受限内存池和 Native 资源统计。
 
-**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.4-2026-08-27`
 
 内存所有权是 ABI 契约的一部分；本模块不保存托管对象，也不替上层拥有持久化数据。
 
@@ -28,7 +26,7 @@
 
 ## 依赖与约束
 
-依赖 `contract-types` 的 Buffer/布局规则和 `error` 的容量失败类别。`job`、`spatial`、`codec` 可以消费本模块的分配能力；内存模块不依赖它们，避免资源层循环。
+依赖 `error` 的容量失败类别；Buffer 布局规则是本模块自己的定义，不再来自任何生成契约。`job`、`spatial`、`codec` 可以消费本模块的分配能力；内存模块不依赖它们，避免资源层循环。
 
 ## 线程、错误与观测
 

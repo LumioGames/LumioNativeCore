@@ -2,10 +2,8 @@
 
 > 提供领域无关的批量 Diff、压缩、Canonical Buffer 和校验热路径。
 
-**BaselineStatus**：pending（`LGE-V1.4` §16 列为后续、待批准）  
 **RepositoryDeliveryPhase**：NativeHeadless  
 **ImplementationPriority**：I1  
-**架构基线**：`LGE-V1.4-2026-08-27`
 
 `codec` 处于 pending（ADR 0005）：仓内只做 feature-gated 私有原型，不进公共 Header/export list；转 approved 只能由架构源批准驱动。职责缩窄为纯字节 Kernel（压缩/校验/diff），不承诺任何跨仓公共 Schema。
 
@@ -28,7 +26,7 @@
 
 ## 依赖与约束
 
-依赖 `contract-types`、`error` 和 `memory`；不编译期依赖 `job`——编码算子作为 operation 经 registry 运行时绑定，跨调用工作区作为 ContextResource 注册进 `kernel-context`（ADR 0002）。压缩库、Hash 库和 Diff 实现通过 Adapter 隔离，供应商类型不能出现在 ABI。
+依赖 `error` 和 `memory`；不编译期依赖 `job`——编码算子作为 operation 经 registry 运行时绑定，跨调用工作区作为 ContextResource 注册进 `kernel-context`（ADR 0002）。压缩库、Hash 库和 Diff 实现通过 Adapter 隔离，供应商类型不能出现在 ABI。
 
 ## 线程、错误与观测
 

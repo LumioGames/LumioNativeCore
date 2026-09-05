@@ -2,10 +2,8 @@
 
 > 提供带 `Index + Generation + Context` 校验的 Native 不透明 Handle 生命周期。
 
-**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.4-2026-08-27`
 
 Handle 只表示 NativeCore 内部资源，不表示 ECS Entity、NetEntity、World 或 Session 身份。
 
@@ -28,7 +26,7 @@ Handle 只表示 NativeCore 内部资源，不表示 ECS Entity、NetEntity、Wo
 
 ## 依赖与约束
 
-依赖 `contract-types` 的固定宽度表示和 `error` 的稳定失败类别；不得依赖 Voxel、Runtime、Server、Client 或 Game。Context 的创建、排空与关闭时序由 `kernel-context` 统一裁决（ADR 0002）；Generation 溢出槽位永久退休、ContextId 单调不复用，规则见 [`kernel-context-lifecycle.md`](../../docs/specs/kernel-context-lifecycle.md) §4，并有版本化测试约束。
+依赖 `error` 的稳定失败类别；不得依赖 Voxel、Runtime、Server、Client 或 Game。Context 的创建、排空与关闭时序由 `kernel-context` 统一裁决（ADR 0002）；Generation 溢出槽位永久退休、ContextId 单调不复用，规则见 [`kernel-context-lifecycle.md`](../../docs/specs/kernel-context-lifecycle.md) §4，并有版本化测试约束。
 
 ## 线程、错误与观测
 

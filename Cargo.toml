@@ -9,7 +9,6 @@ members = [
     "crates/lumio-timer",
     "crates/lumio-codec",
     "crates/lumio-diagnostics",
-    "crates/lumio-native-ffi",
     "crates/lumio-test-support",
     "xtask",
 ]

@@ -51,7 +51,7 @@ jobs:
           cargo clippy --workspace --all-targets -- -D warnings
           cargo build --workspace
           cargo test --workspace
-      - name: Dependency DAG and symbol surface assertions
+      - name: Dependency DAG and artifact-shape assertions
         run: |
           cargo xtask check-dep-dag
-          cargo xtask dump-symbols
+          cargo xtask assert-no-native-artifacts

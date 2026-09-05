@@ -139,30 +139,6 @@ fn assert_default_does_not_enable_diagnostics(name: &str, text: &str) {
     );
 }
 
-fn ffi_diagnostics_is_optional(text: &str) -> bool {
-    let deps = section_body(text, "dependencies");
-    for line in deps.lines() {
-        if !is_package_key(line, "lumio-diagnostics") {
-            continue;
-        }
-        let compact = line.replace(' ', "");
-        if !compact.contains("optional=true") {
-            return false;
-        }
-    }
-    let table = section_body(text, "dependencies.lumio-diagnostics");
-    if !table.trim().is_empty() {
-        let optional = table.lines().any(|line| {
-            let compact = line.trim().replace(' ', "");
-            compact == "optional=true" || compact.starts_with("optional=true")
-        });
-        if !optional {
-            return false;
-        }
-    }
-    true
-}
-
 fn test_config() -> ContextConfig {
     ContextConfig {
         limits: ConfiguredLimits {
@@ -191,13 +167,6 @@ fn core_default_graph_has_no_diagnostics_dependency() {
         assert_no_normal_diagnostics_dep(name, &text);
         assert_default_does_not_enable_diagnostics(name, &text);
     }
-
-    let ffi = read_manifest("lumio-native-ffi");
-    assert!(
-        ffi_diagnostics_is_optional(&ffi),
-        "lumio-native-ffi may list lumio-diagnostics only as optional = true"
-    );
-    assert_default_does_not_enable_diagnostics("lumio-native-ffi", &ffi);
 }
 
 #[test]

@@ -2,25 +2,21 @@
 //!
 //! - `check-dep-dag`：按 `docs/specs/native-core-module-map.md` §2 的白名单断言
 //!   workspace crate 间的编译期依赖方向（normal 依赖，dev 依赖不计）。
-//! - `dump-symbols`：构建 `lumio-native-ffi` cdylib 并断言符号表不含跨仓 Root 符号
-//!   （ADR 0001：`lumio_core_get_api_v1` 归 CoreEngine root-abi）。
-//! - `check-baseline`：活动入口、模块 README、CI 与镜像 Hash 对齐 `LGE-V1.4-2026-08-27`。
-//! - `gen-contracts`：从 `docs/architecture/abi/` 镜像重新生成
-//!   `crates/lumio-contract-types/src/generated_data.rs`（生成物不手改）。
-
-mod baseline;
-mod contracts;
+//! - `assert-no-native-artifacts`：断言 workspace 内不存在 `cdylib` / `staticlib` 目标。
+//!   本仓只产 rlib：跨语言边界与其唯一真值 `native-abi.json` 都在架构仓，本仓以 Rust
+//!   路径依赖被那边的 SDK 编入（ADR 0009）。
 
 use std::collections::BTreeMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
-/// 跨仓 Root 符号：NativeCore 产物中出现即失败（ADR 0001）。
-/// `dump-symbols` 会与镜像 bundle 的 `entrySymbol` 交叉校验，防止硬编码漂移。
-const FORBIDDEN_ROOT_SYMBOL: &str = "lumio_core_get_api_v1";
-
-/// 已批准导出的 provider 符号。provider 组合契约未发布（T-ffi-04 blocked
-/// 半边），列表保持为空：任何 `symbolPrefix` 前缀导出都视为违规。
-const APPROVED_PROVIDER_EXPORTS: &[&str] = &[];
+fn workspace_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask is a workspace member")
+        .to_path_buf()
+}
 
 /// crate -> 允许的 workspace 直接依赖（normal 图）。白名单以外的一切 workspace 边都算违规；
 /// 非 workspace 的外部依赖必须出现在 `EXTERNAL_ALLOWLIST`。
@@ -45,20 +41,6 @@ fn allowed_deps() -> BTreeMap<&'static str, Vec<&'static str>> {
         (
             "lumio-diagnostics",
             vec!["lumio-contract-types", "lumio-kernel", "lumio-platform"],
-        ),
-        (
-            "lumio-native-ffi",
-            vec![
-                "lumio-contract-types",
-                "lumio-kernel",
-                "lumio-job",
-                "lumio-spatial",
-                "lumio-platform",
-                "lumio-timer",
-                // 仅 experimental feature 下可出现（pending 模块，ADR 0005）：
-                "lumio-codec",
-                "lumio-diagnostics",
-            ],
         ),
         (
             "lumio-test-support",
@@ -151,15 +133,6 @@ fn cmd_check_dep_dag() -> ExitCode {
             }
         }
     }
-    // 默认图中 pending 模块不得挂在 ffi 上（ADR 0005：默认发布面不含 experimental）。
-    if let Some(ffi_deps) = graph.get("lumio-native-ffi") {
-        for pending in ["lumio-codec", "lumio-diagnostics"] {
-            if ffi_deps.iter().any(|d| d == pending) {
-                eprintln!("FAIL 默认 feature 下 lumio-native-ffi 不得依赖 {pending}");
-                return ExitCode::FAILURE;
-            }
-        }
-    }
     let violations = check_graph(&graph, &allowed, EXTERNAL_ALLOWLIST);
     if violations.is_empty() {
         println!(
@@ -175,145 +148,93 @@ fn cmd_check_dep_dag() -> ExitCode {
     }
 }
 
-/// 从 `cargo metadata` 解析 target 目录（CI/沙箱可能重定向 CARGO_TARGET_DIR，不可硬编码）。
-fn target_directory() -> Result<String, String> {
-    let out = Command::new("cargo")
-        .args(["metadata", "--format-version", "1", "--no-deps"])
-        .output()
-        .map_err(|e| format!("cargo metadata 启动失败: {e}"))?;
-    if !out.status.success() {
-        return Err("cargo metadata 失败".to_string());
-    }
-    let text = String::from_utf8_lossy(&out.stdout);
-    let key = "\"target_directory\":\"";
-    let start = text.find(key).ok_or("metadata 中无 target_directory")? + key.len();
-    let rest = &text[start..];
-    let end = rest.find('"').ok_or("target_directory 未闭合")?;
-    Ok(rest[..end].replace("\\\\", "\\"))
+/// workspace 根 `Cargo.toml` 的 members 列表（相对路径，按声明顺序）。
+fn workspace_members(root: &Path) -> Result<Vec<String>, String> {
+    let text =
+        fs::read_to_string(root.join("Cargo.toml")).map_err(|e| format!("read Cargo.toml: {e}"))?;
+    let body = text
+        .split_once("members = [")
+        .ok_or("Cargo.toml 中找不到 workspace members")?
+        .1;
+    let body = body.split_once(']').ok_or("members 列表未闭合")?.0;
+    Ok(body
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim().trim_end_matches(',');
+            line.strip_prefix('"')?
+                .strip_suffix('"')
+                .map(str::to_string)
+        })
+        .collect())
 }
 
-fn cmd_dump_symbols() -> ExitCode {
-    let build = Command::new("cargo")
-        .args(["build", "-p", "lumio-native-ffi"])
-        .status();
-    match build {
-        Ok(s) if s.success() => {}
-        other => {
-            eprintln!("error: 构建 lumio-native-ffi 失败: {other:?}");
-            return ExitCode::from(2);
+/// 一个成员清单声明的 lib `crate-type` 值；未声明 `[lib] crate-type` 时为空（即默认 rlib）。
+fn declared_crate_types(manifest: &str) -> Vec<String> {
+    let Some(rest) = manifest.split_once("crate-type") else {
+        return Vec::new();
+    };
+    let Some(rest) = rest.1.split_once('[') else {
+        return Vec::new();
+    };
+    let Some((list, _)) = rest.1.split_once(']') else {
+        return Vec::new();
+    };
+    list.split(',')
+        .map(|kind| kind.trim().trim_matches('"').to_string())
+        .filter(|kind| !kind.is_empty())
+        .collect()
+}
+
+/// 违反「本仓只产 rlib」的目标：返回 `成员: crate-type` 描述列表。
+fn native_artifact_violations(members: &[(String, Vec<String>)]) -> Vec<String> {
+    const FORBIDDEN: [&str; 2] = ["cdylib", "staticlib"];
+    let mut hits = Vec::new();
+    for (member, kinds) in members {
+        for kind in kinds {
+            if FORBIDDEN.contains(&kind.as_str()) {
+                hits.push(format!("{member}: {kind}"));
+            }
         }
     }
-    let target_dir = match target_directory() {
-        Ok(dir) => dir,
+    hits
+}
+
+fn cmd_assert_no_native_artifacts() -> ExitCode {
+    let root = workspace_root();
+    let members = match workspace_members(&root) {
+        Ok(m) => m,
         Err(err) => {
             eprintln!("error: {err}");
             return ExitCode::from(2);
         }
     };
-    let file = if cfg!(target_os = "macos") {
-        "liblumio_native_ffi.dylib"
-    } else if cfg!(target_os = "windows") {
-        "lumio_native_ffi.dll"
-    } else {
-        "liblumio_native_ffi.so"
-    };
-    let artifact = format!("{target_dir}/debug/{file}");
-    let out = Command::new("nm").args(["-gU", &artifact]).output();
-    let out = match out {
-        Ok(o) if o.status.success() => o,
-        other => {
-            eprintln!("error: nm -gU {artifact} 失败: {other:?}");
-            return ExitCode::from(2);
-        }
-    };
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    let mut exported: Vec<String> = Vec::new();
-    for line in stdout.lines() {
-        // nm 行如 `0000000000001234 T _lumio_xxx`；取符号列并去掉 macOS 下划线前缀。
-        if let Some(sym) = line.split_whitespace().last() {
-            exported.push(sym.trim_start_matches('_').to_string());
-        }
+    if members.is_empty() {
+        eprintln!("error: workspace members 解析为空");
+        return ExitCode::from(2);
     }
-
-    // 符号策略来自镜像 bundle；与硬编码交叉校验，防止两边各自漂移。
-    let (entry_symbol, symbol_prefix) =
-        match contracts::abi_symbol_policy(&baseline::workspace_root()) {
-            Ok(policy) => policy,
-            Err(err) => {
-                eprintln!("error: 读取镜像符号策略失败: {err}");
+    let mut declared = Vec::new();
+    for member in &members {
+        let path = root.join(member).join("Cargo.toml");
+        match fs::read_to_string(&path) {
+            Ok(text) => declared.push((member.clone(), declared_crate_types(&text))),
+            Err(e) => {
+                eprintln!("error: read {}: {e}", path.display());
                 return ExitCode::from(2);
             }
-        };
-    let mut failed = false;
-    if entry_symbol != FORBIDDEN_ROOT_SYMBOL {
-        eprintln!(
-            "FAIL 镜像 entrySymbol `{entry_symbol}` 与硬编码 Root 符号 `{FORBIDDEN_ROOT_SYMBOL}` 不一致"
-        );
-        failed = true;
+        }
     }
-    if exported.iter().any(|s| s == FORBIDDEN_ROOT_SYMBOL) {
-        eprintln!(
-            "FAIL 产物导出了跨仓 Root 符号 {FORBIDDEN_ROOT_SYMBOL}（归 CoreEngine root-abi，ADR 0001）"
-        );
-        failed = true;
-    }
-    let unapproved: Vec<&String> = exported
-        .iter()
-        .filter(|s| s.starts_with(&symbol_prefix))
-        .filter(|s| !APPROVED_PROVIDER_EXPORTS.contains(&s.as_str()))
-        .collect();
-    if unapproved.is_empty() {
+    let violations = native_artifact_violations(&declared);
+    if violations.is_empty() {
         println!(
-            "dump-symbols：{symbol_prefix}* 导出 0 个未批准符号（批准列表 {} 项）",
-            APPROVED_PROVIDER_EXPORTS.len()
+            "assert-no-native-artifacts OK：{} 个 workspace 成员，无 cdylib / staticlib 目标。",
+            declared.len()
         );
-    } else {
-        eprintln!(
-            "FAIL 未批准的 {symbol_prefix}* 导出：{unapproved:?}（provider 符号列表未发布，批准列表为空）"
-        );
-        failed = true;
-    }
-    if failed {
-        ExitCode::FAILURE
-    } else {
         ExitCode::SUCCESS
-    }
-}
-
-fn cmd_check_baseline() -> ExitCode {
-    match baseline::audit_v14_activity_refs(&baseline::workspace_root()) {
-        Ok(()) => {
-            println!(
-                "check-baseline OK：活动入口对齐 {}，镜像 {}",
-                baseline::BASELINE_ID,
-                baseline::MIRROR_REL
-            );
-            ExitCode::SUCCESS
+    } else {
+        for v in &violations {
+            eprintln!("FAIL 本仓不得产原生库目标（ADR 0009）：{v}");
         }
-        Err(errors) => {
-            for e in errors {
-                eprintln!("FAIL {e}");
-            }
-            ExitCode::FAILURE
-        }
-    }
-}
-
-fn cmd_gen_contracts() -> ExitCode {
-    let root = baseline::workspace_root();
-    match contracts::write_generated_data(&root) {
-        Ok(true) => {
-            println!("gen-contracts：已更新 {}", contracts::GENERATED_DATA_REL);
-            ExitCode::SUCCESS
-        }
-        Ok(false) => {
-            println!("gen-contracts：{} 已是最新", contracts::GENERATED_DATA_REL);
-            ExitCode::SUCCESS
-        }
-        Err(e) => {
-            eprintln!("error: {e}");
-            ExitCode::FAILURE
-        }
+        ExitCode::FAILURE
     }
 }
 
@@ -321,13 +242,9 @@ fn main() -> ExitCode {
     let arg = std::env::args().nth(1);
     match arg.as_deref() {
         Some("check-dep-dag") => cmd_check_dep_dag(),
-        Some("dump-symbols") => cmd_dump_symbols(),
-        Some("check-baseline") => cmd_check_baseline(),
-        Some("gen-contracts") => cmd_gen_contracts(),
+        Some("assert-no-native-artifacts") => cmd_assert_no_native_artifacts(),
         _ => {
-            eprintln!(
-                "用法: cargo xtask <check-dep-dag|dump-symbols|check-baseline|gen-contracts>"
-            );
+            eprintln!("用法: cargo xtask <check-dep-dag|assert-no-native-artifacts>");
             ExitCode::from(2)
         }
     }
@@ -384,12 +301,6 @@ mod tests {
     }
 
     #[test]
-    fn rejects_reverse_edge_into_ffi_facade() {
-        assert_rejects("lumio-kernel", "lumio-native-ffi");
-        assert_rejects("lumio-job", "lumio-native-ffi");
-    }
-
-    #[test]
     fn rejects_test_support_in_normal_graph() {
         assert_rejects("lumio-job", "lumio-test-support");
     }
@@ -407,58 +318,44 @@ mod tests {
     }
 
     #[test]
-    fn v14_activity_refs_match_live_execution_truth() {
-        let root = crate::baseline::workspace_root();
-        crate::baseline::audit_v14_activity_refs(&root).unwrap_or_else(|errors| {
-            panic!(
-                "R-00010 activity-entry audit failed:\n{}",
-                errors.join("\n")
-            );
-        });
-    }
-
-    /// 生成物不得手改：从镜像重推导必须与已提交的 generated_data.rs 逐字节一致。
-    #[test]
-    fn generated_data_matches_mirror_derivation() {
-        let root = crate::baseline::workspace_root();
-        let derived = crate::contracts::derive_generated_data(&root)
-            .unwrap_or_else(|e| panic!("derive generated_data: {e}"));
-        let path = crate::contracts::generated_data_path(&root);
-        let committed = std::fs::read_to_string(&path).unwrap_or_else(|e| {
-            panic!(
-                "read {}: {e}（先跑 cargo xtask gen-contracts）",
-                path.display()
-            )
-        });
+    fn declared_crate_types_reads_the_lib_section() {
+        let manifest = "[package]\nname = \"x\"\n\n[lib]\ncrate-type = [\"cdylib\", \"staticlib\", \"rlib\"]\n";
         assert_eq!(
-            committed, derived,
-            "generated_data.rs 与镜像推导不一致：重跑 `cargo xtask gen-contracts` 并与镜像一起提交"
+            declared_crate_types(manifest),
+            vec!["cdylib", "staticlib", "rlib"]
         );
+        assert!(declared_crate_types("[package]\nname = \"x\"\n").is_empty());
     }
 
     #[test]
-    fn v14_mirror_digest_in_baseline_file_matches_hashed_bytes() {
-        let root = crate::baseline::workspace_root();
-        let sha_path = root.join(crate::baseline::BASELINE_SHA_REL);
-        let body = std::fs::read_to_string(&sha_path).expect("read .baseline.sha256");
-        let rows = crate::baseline::parse_baseline_sha_file(&body).expect("parse .baseline.sha256");
-        assert!(
-            rows.iter()
-                .any(|(_, rel)| rel == crate::baseline::MIRROR_REL)
+    fn rejects_a_cdylib_or_staticlib_target() {
+        let rows = vec![
+            ("crates/lumio-kernel".to_string(), vec!["rlib".to_string()]),
+            ("crates/rogue".to_string(), vec!["cdylib".to_string()]),
+            ("crates/rogue2".to_string(), vec!["staticlib".to_string()]),
+        ];
+        assert_eq!(
+            native_artifact_violations(&rows),
+            vec!["crates/rogue: cdylib", "crates/rogue2: staticlib"]
         );
-        for required in crate::baseline::ABI_MIRROR_RELS {
-            assert!(
-                rows.iter().any(|(_, rel)| rel == required),
-                ".baseline.sha256 must pin {required}"
-            );
-        }
-        for (expected, rel) in &rows {
-            let actual = crate::baseline::file_sha256_hex(
-                &root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR)),
-            )
-            .unwrap_or_else(|e| panic!("hash {rel}: {e}"));
-            assert_eq!(&actual, expected, "pinned digest mismatch for {rel}");
-        }
+    }
+
+    /// 真实 workspace 必须满足这条线，而不只是纯函数满足。
+    #[test]
+    fn live_workspace_has_no_native_artifacts() {
+        let root = workspace_root();
+        let members = workspace_members(&root).expect("parse workspace members");
+        assert!(!members.is_empty(), "workspace members parsed empty");
+        let declared: Vec<(String, Vec<String>)> = members
+            .iter()
+            .map(|m| {
+                let text = std::fs::read_to_string(root.join(m).join("Cargo.toml"))
+                    .unwrap_or_else(|e| panic!("read {m}/Cargo.toml: {e}"));
+                (m.clone(), declared_crate_types(&text))
+            })
+            .collect();
+        let hits = native_artifact_violations(&declared);
+        assert!(hits.is_empty(), "unexpected native artifacts: {hits:?}");
     }
 
     #[test]
@@ -477,17 +374,6 @@ mod tests {
             (
                 "lumio-diagnostics",
                 &["lumio-contract-types", "lumio-kernel"],
-            ),
-            (
-                "lumio-native-ffi",
-                &[
-                    "lumio-contract-types",
-                    "lumio-kernel",
-                    "lumio-job",
-                    "lumio-spatial",
-                    "lumio-platform",
-                    "lumio-timer",
-                ],
             ),
             (
                 "lumio-test-support",

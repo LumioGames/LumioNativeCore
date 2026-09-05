@@ -1,7 +1,7 @@
 # 0001 · abi 拆为 contract-types 叶子与 native-core-ffi 门面，NativeCore 不导出跨仓 Root 符号
 
 - 日期:2026-08-27
-- 状态:生效
+- 状态:被 0009 取代
 
 ## 背景
 

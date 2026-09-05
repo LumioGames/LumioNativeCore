@@ -1,6 +1,4 @@
-//! Job and operation identity. Generated operation numbers stay unpublished.
-
-use lumio_contract_types::registry;
+//! Job and operation identity. Operation numbers are crate-local.
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct JobId(u64);
@@ -33,16 +31,4 @@ impl OperationId {
     pub const fn test_only(offset: u16) -> Self {
         Self(Self::TEST_RANGE_START + offset as u32)
     }
-}
-
-/// True iff a generated registry code has the same raw value as `id`.
-///
-/// `ArchitectureOperationId` is opaque (no `raw()`). The iterator is empty
-/// until the generated package is published (B-ABI-004).
-pub fn operation_id_overlaps_generated(id: OperationId) -> bool {
-    let raw = id.raw();
-    registry::operation_ids().any(|_generated| {
-        let _ = raw;
-        false
-    })
 }

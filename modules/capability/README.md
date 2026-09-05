@@ -2,12 +2,10 @@
 
 > 声明并校验平台、编译 Feature、Native 后端和资源能力，不表达业务模式。
 
-**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Architecture Gate / Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.4-2026-08-27`
 
-Capability 标识和兼容规则由 `LumioGameEngineArchitecture` 的 Baseline 定义；本文只说明本地读取和报告边界。
+Capability 键是本仓内部的不透明数值，由嵌入方（架构仓 SDK）自行定义键空间；本文只说明本地读取和报告边界。
 
 ## 负责范围
 
@@ -28,7 +26,7 @@ Capability 标识和兼容规则由 `LumioGameEngineArchitecture` 的 Baseline �
 
 ## 依赖与约束
 
-依赖 `contract-types` 的固定宽度集合、版本字段与生成能力位常量；能力位、名称和兼容关系来自架构源生成物。模块不得直接依赖网络、Voxel、Gameplay 或 Host 实现。
+零外部依赖：键是不透明 `u32`，键空间与名称由嵌入方定义，本模块只做集合成员判定，不保存键名表。模块不得直接依赖网络、Voxel、Gameplay 或 Host 实现。
 
 ## 线程、错误与观测
 

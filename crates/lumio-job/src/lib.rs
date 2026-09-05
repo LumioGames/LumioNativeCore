@@ -15,7 +15,7 @@ mod worker;
 
 pub use cancel::{CancellationSource, CancellationView};
 pub use completion::{CompletionBatch, JobCompletion};
-pub use id::{JobId, OperationId, operation_id_overlaps_generated};
+pub use id::{JobId, OperationId};
 pub use operation::{OperationRegistry, TypedKernel};
 pub use queue::BoundedJobQueue;
 pub use state::{JobState, JobStateCell, JobStateMachine};

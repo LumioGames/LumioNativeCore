@@ -1,8 +1,9 @@
 //! Static capability set, configured resource limits, and runtime status.
 //!
-//! Capability **keys** are projected from the generated architecture registry
-//! (D-015 / ADR-040 §7.1). Capability **bits** remain blocked (B-ABI-002):
-//! `capability_bits` mask-vs-count semantics and bit assignment are unfrozen.
+//! A capability **key** is an opaque `u32` owned by the embedder: this crate
+//! only decides set membership and never keeps a key-name table, because the
+//! names in play (`Voxel*`, host backends) are architecture and domain
+//! semantics that NativeCore does not own (ADR 0009).
 
 mod limits;
 mod runtime;

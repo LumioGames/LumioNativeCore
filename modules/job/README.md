@@ -2,10 +2,8 @@
 
 > 提供有界 Worker、Typed Job、取消、超时和 Completion Batch 的 Native 调度原语。
 
-**BaselineStatus**：approved（`LGE-V1.4` §16 模块地图）  
 **RepositoryDeliveryPhase**：Foundation  
 **ImplementationPriority**：I0  
-**架构基线**：`LGE-V1.4-2026-08-27`
 
 Job 结果由上层在规定 Barrier 消费；Native Worker 不回调托管 Hot Gameplay。
 
@@ -28,7 +26,7 @@ Job 结果由上层在规定 Barrier 消费；Native Worker 不回调托管 Hot 
 
 ## 依赖与约束
 
-依赖 `contract-types`、`handle`、`error`、`memory` 与私有单调时钟 port（跨 ABI 只收相对 duration，不拥有 Wall Clock/TickId）；Worker 集作为 ContextResource 注册进 `kernel-context`（ADR 0002）。Job 不强制依赖具体 Kernel；调用方可在 `NativeJobBarrier` 或之后应用结果。线程亲和、重入性、最大并发和资源预算必须写进契约。
+依赖 `handle`、`error`、`memory` 与私有单调时钟 port（跨 ABI 只收相对 duration，不拥有 Wall Clock/TickId）；Worker 集作为 ContextResource 注册进 `kernel-context`（ADR 0002）。Job 不强制依赖具体 Kernel；调用方可在 `NativeJobBarrier` 或之后应用结果。线程亲和、重入性、最大并发和资源预算必须写进契约。
 
 ## 线程、错误与观测
 

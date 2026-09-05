@@ -11,6 +11,6 @@ mod interleaving;
 mod leak;
 
 pub use clock::{FakeClock, FakeClockError};
-pub use fixtures::{FaultPlan, FixtureLoader, PanicProbe};
+pub use fixtures::{FaultPlan, PanicProbe};
 pub use interleaving::Interleaving;
 pub use leak::LeakSnapshot;

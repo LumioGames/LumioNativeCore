@@ -1,7 +1,6 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/lumio-contract-types",
     "crates/lumio-platform",
     "crates/lumio-kernel",
     "crates/lumio-job",
@@ -9,7 +8,6 @@ members = [
     "crates/lumio-timer",
     "crates/lumio-codec",
     "crates/lumio-diagnostics",
-    "crates/lumio-native-ffi",
     "crates/lumio-test-support",
     "xtask",
 ]

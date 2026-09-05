@@ -26,9 +26,3 @@ pub fn manager_at_tick(tick: u64) -> (TimerManager, TimerScope, CallbackSlot) {
 pub fn dues(records: &[FiringRecord]) -> Vec<u64> {
     records.iter().map(|r| r.due_tick).collect()
 }
-
-pub fn abi_text() -> String {
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../docs/architecture/wire/native-timer-abi-v1.json");
-    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
-}

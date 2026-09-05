@@ -18,11 +18,11 @@ ADR-056 §7：定时内核只有一个，在 NativeCore。C-4′ 把托管可达
 
 - **设计面**：单内核双模式。`TimerMode::TickFrame` 拥有 Tick/Frame；`TimerMode::WallClock` 拥有单调毫秒 deadline。两模式共用 TimerHandle / CallbackSlot / 错误码；manager 实例之间 handle 空间不互指。
 - **交互面**：进程内 `scheduleOneShot` / `scheduleRepeating` / `cancel` / `advance` / `pump`；C ABI 另有 create/destroy/scope/slot/drain。CallbackSlot 生命周期 `unbound → armed → delivering → closed`。禁止函数指针。
-- **实现面**：crate `lumio-timer` 为唯一内核；`lumio-native-ffi` 导出 `timer_*`。Bot 节奏 N=5 ticks（`BOT_CHAT_CADENCE_TICKS`）。Server 周期任务每 10 ticks。五分钟重连走 wallClock one-shot（`RECONNECT_RETENTION_MS`）。`slot_queue_full` 稳定拒绝并使该定时器终态，进程继续。
+- **实现面**：内核 `lumio-timer` 在 NativeCore；C ABI 插头在架构仓 `engine/native/modules/sdk-native/src/timer.rs`；经 `engine/abi/native-abi.json` 的 `timer_*` 槽到达托管侧。Bot 节奏 N=5 ticks（`BOT_CHAT_CADENCE_TICKS`）。Server 周期任务每 10 ticks。五分钟重连走 wallClock one-shot（`RECONNECT_RETENTION_MS`）。`slot_queue_full` 稳定拒绝并使该定时器终态，进程继续。
 
 ## 待解决
 
-- CoreEngine 如何把本仓 provider 表装进 `lumio_engine_get_api_v1`（Root 符号仍归 CoreEngine）。
+- 无。
 
 ## 相关
 

@@ -2,10 +2,8 @@
 
 > 产生 Native Metrics、Trace Event 和 Failure Bundle 片段，供上层观测与故障重建使用。
 
-**BaselineStatus**：pending（`LGE-V1.4` §16 列为后续、待批准）  
 **RepositoryDeliveryPhase**：NativeHeadless / Production Hardening  
 **ImplementationPriority**：I1  
-**架构基线**：`LGE-V1.4-2026-08-27`
 
 `diagnostics` 处于 pending（ADR 0005）：仓内只做 feature-gated 私有原型，不进公共 Header/export list；转 approved 只能由架构源批准驱动。共享事件字段和 Failure Bundle Schema 以架构源发布物为准，本文不复制字段清单。
 
@@ -28,7 +26,7 @@
 
 ## 依赖与约束
 
-依赖 `contract-types` 和 `error` 的稳定承载结构；核心模块经 record port 接入（端口定义在核心层，本模块只做实现，任何核心模块不得编译期依赖本模块——ADR 0005），核心计算路径不等待诊断 Sink。外部日志生态只能通过 Adapter 接入，供应商类型不能进入 ABI。
+依赖 `error` 的稳定承载结构；核心模块经 record port 接入（端口定义在核心层，本模块只做实现，任何核心模块不得编译期依赖本模块——ADR 0005），核心计算路径不等待诊断 Sink。外部日志生态只能通过 Adapter 接入，供应商类型不能进入 ABI。
 
 ## 线程、错误与观测
 

@@ -2,12 +2,10 @@
 
 > 提供确定性 Tick/Frame Timer Manager（one-shot/repeating/cancel、CallbackSlot 投递）以及 Server/Client 适配器。
 
-**BaselineStatus**：approved（架构源 ADR-055 / `lumio.native-timer-abi.v1`；不进入 Root ABI）  
 **RepositoryDeliveryPhase**：NativeHeadless  
 **ImplementationPriority**：I1  
-**架构基线**：`LGE-V1.4-2026-08-27`
 
-Timer 是进程内 API 契约，不进入 `engine/abi/native-abi.json`，也不由 `lumio-native-ffi` 导出 C 符号。
+内核 `lumio-timer` 在 NativeCore；C ABI 插头在架构仓 `engine/native/modules/sdk-native/src/timer.rs`；经 `engine/abi/native-abi.json` 的 `timer_*` 槽到达托管侧。
 
 ## 负责范围
 
@@ -30,7 +28,7 @@ Timer 是进程内 API 契约，不进入 `engine/abi/native-abi.json`，也不�
 
 ## 依赖与约束
 
-依赖私有 `lumio-platform` 时钟类型，仅供并列的宿主墙钟门面使用；Tick Manager 本身不读墙钟。不编译期依赖 `job`、`diagnostics` 实现或 `native-core-ffi`。generation 溢出是进程级 fail-stop，不是稳定错误码。
+依赖私有 `lumio-platform` 时钟类型，仅供并列的宿主墙钟门面使用；Tick Manager 本身不读墙钟。不编译期依赖 `job` 或 `diagnostics` 实现。generation 溢出是进程级 fail-stop，不是稳定错误码。
 
 ## 线程、错误与观测
 

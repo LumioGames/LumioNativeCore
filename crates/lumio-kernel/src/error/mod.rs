@@ -1,10 +1,13 @@
-//! Kernel error facade: stable categories, bounded detail, and constructors.
+//! Kernel error facade: internal categories, bounded detail, and constructors.
+//!
+//! `ErrorCategory` is an **internal** enum: it carries no cross-boundary
+//! numeric and projects onto no published registry. Mapping a failure onto a
+//! status code that managed callers see belongs to the SDK plug in the
+//! architecture repository, against `engine/abi/native-abi.json` (ADR 0009).
 
 mod category;
-mod mapping;
 
 pub use category::{ErrorCategory, ErrorDetail, KernelError};
-pub use mapping::to_architecture_error_code;
 
 pub type KernelResult<T> = Result<T, KernelError>;
 

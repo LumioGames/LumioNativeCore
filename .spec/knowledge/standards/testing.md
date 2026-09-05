@@ -42,7 +42,7 @@ node .spec/tools/spec-lint.mjs
 node --test .spec/tools/spec-lint.test.mjs
 ```
 
-首次引入 Cargo 工程时，必须加入 `cargo fmt --check`、`cargo clippy`、单元/并发/FFI 测试、Miri/Sanitizer 与跨平台构建矩阵。公共 ABI/Capability 变更还必须在 `LumioGameEngineArchitecture` 安装 `requirements-dev.txt` 后运行 `python3 tools/lumio_contract.py validate`。
+首次引入 Cargo 工程时，必须加入 `cargo fmt --check`、`cargo clippy`、单元/并发测试、Miri/Sanitizer 与跨平台构建矩阵。改到本仓 crate 公开 Rust API 时，还必须在架构仓 `engine/native` 复跑 `cargo build -p lumio-engine-native` 与 `cargo test -p lumio-engine-native`——那是本仓唯一的消费者。
 
 ## 本仓 Headless / 契约测试面
 

@@ -22,34 +22,16 @@ fn workspace_root() -> PathBuf {
 /// 非 workspace 的外部依赖必须出现在 `EXTERNAL_ALLOWLIST`。
 fn allowed_deps() -> BTreeMap<&'static str, Vec<&'static str>> {
     BTreeMap::from([
-        ("lumio-contract-types", vec![]),
         ("lumio-platform", vec![]),
-        (
-            "lumio-kernel",
-            vec!["lumio-contract-types", "lumio-platform"],
-        ),
-        (
-            "lumio-job",
-            vec!["lumio-contract-types", "lumio-kernel", "lumio-platform"],
-        ),
-        (
-            "lumio-spatial",
-            vec!["lumio-contract-types", "lumio-kernel"],
-        ),
+        ("lumio-kernel", vec!["lumio-platform"]),
+        ("lumio-job", vec!["lumio-kernel", "lumio-platform"]),
+        ("lumio-spatial", vec!["lumio-kernel"]),
         ("lumio-timer", vec![]),
-        ("lumio-codec", vec!["lumio-contract-types", "lumio-kernel"]),
-        (
-            "lumio-diagnostics",
-            vec!["lumio-contract-types", "lumio-kernel", "lumio-platform"],
-        ),
+        ("lumio-codec", vec!["lumio-kernel"]),
+        ("lumio-diagnostics", vec!["lumio-kernel", "lumio-platform"]),
         (
             "lumio-test-support",
-            vec![
-                "lumio-contract-types",
-                "lumio-kernel",
-                "lumio-job",
-                "lumio-platform",
-            ],
+            vec!["lumio-kernel", "lumio-job", "lumio-platform"],
         ),
         ("xtask", vec![]),
     ])
@@ -296,8 +278,7 @@ mod tests {
 
     #[test]
     fn rejects_leaf_gaining_dependencies() {
-        assert_rejects("lumio-contract-types", "lumio-kernel");
-        assert_rejects("lumio-platform", "lumio-contract-types");
+        assert_rejects("lumio-platform", "lumio-kernel");
     }
 
     #[test]
@@ -361,28 +342,16 @@ mod tests {
     #[test]
     fn accepts_the_specified_dag() {
         let g = graph(&[
-            ("lumio-contract-types", &[] as &[&str]),
-            ("lumio-platform", &[]),
-            ("lumio-kernel", &["lumio-contract-types", "lumio-platform"]),
-            (
-                "lumio-job",
-                &["lumio-contract-types", "lumio-kernel", "lumio-platform"],
-            ),
-            ("lumio-spatial", &["lumio-contract-types", "lumio-kernel"]),
+            ("lumio-platform", &[] as &[&str]),
+            ("lumio-kernel", &["lumio-platform"]),
+            ("lumio-job", &["lumio-kernel", "lumio-platform"]),
+            ("lumio-spatial", &["lumio-kernel"]),
             ("lumio-timer", &[]),
-            ("lumio-codec", &["lumio-contract-types", "lumio-kernel"]),
-            (
-                "lumio-diagnostics",
-                &["lumio-contract-types", "lumio-kernel"],
-            ),
+            ("lumio-codec", &["lumio-kernel"]),
+            ("lumio-diagnostics", &["lumio-kernel"]),
             (
                 "lumio-test-support",
-                &[
-                    "lumio-contract-types",
-                    "lumio-kernel",
-                    "lumio-job",
-                    "lumio-platform",
-                ],
+                &["lumio-kernel", "lumio-job", "lumio-platform"],
             ),
             ("xtask", &[]),
         ]);

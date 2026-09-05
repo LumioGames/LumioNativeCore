@@ -6,19 +6,13 @@ version = 4
 name = "lumio-codec"
 version = "0.0.0"
 dependencies = [
- "lumio-contract-types",
  "lumio-kernel",
 ]
-
-[[package]]
-name = "lumio-contract-types"
-version = "0.0.0"
 
 [[package]]
 name = "lumio-diagnostics"
 version = "0.0.0"
 dependencies = [
- "lumio-contract-types",
  "lumio-kernel",
  "lumio-platform",
 ]
@@ -27,7 +21,6 @@ dependencies = [
 name = "lumio-job"
 version = "0.0.0"
 dependencies = [
- "lumio-contract-types",
  "lumio-kernel",
  "lumio-platform",
  "lumio-test-support",
@@ -37,7 +30,6 @@ dependencies = [
 name = "lumio-kernel"
 version = "0.0.0"
 dependencies = [
- "lumio-contract-types",
  "lumio-platform",
  "lumio-test-support",
 ]
@@ -50,7 +42,6 @@ version = "0.0.0"
 name = "lumio-spatial"
 version = "0.0.0"
 dependencies = [
- "lumio-contract-types",
  "lumio-kernel",
 ]
 
@@ -58,7 +49,6 @@ dependencies = [
 name = "lumio-test-support"
 version = "0.0.0"
 dependencies = [
- "lumio-contract-types",
  "lumio-job",
  "lumio-kernel",
  "lumio-platform",

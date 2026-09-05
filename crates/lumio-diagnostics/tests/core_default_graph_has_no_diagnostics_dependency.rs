@@ -14,7 +14,6 @@ const CORE_CRATES: &[&str] = &[
     "lumio-kernel",
     "lumio-job",
     "lumio-platform",
-    "lumio-contract-types",
     "lumio-spatial",
 ];
 

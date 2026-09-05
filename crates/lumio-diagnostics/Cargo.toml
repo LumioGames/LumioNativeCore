@@ -5,6 +5,5 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
-lumio-contract-types = { path = "../lumio-contract-types" }
 lumio-kernel = { path = "../lumio-kernel" }
 lumio-platform = { path = "../lumio-platform" }
